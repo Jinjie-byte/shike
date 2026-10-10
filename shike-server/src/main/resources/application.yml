@@ -8,15 +8,15 @@ spring:
     allow-circular-references: true
   datasource:
     druid:
-      driver-class-name: ${sky.datasource.driver-class-name}
-      url: jdbc:mysql://${sky.datasource.host}:${sky.datasource.port}/${sky.datasource.database}?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
-      username: ${sky.datasource.username}
-      password: ${sky.datasource.password}
+      driver-class-name: ${shike.datasource.driver-class-name}
+      url: jdbc:mysql://${shike.datasource.host}:${shike.datasource.port}/${shike.datasource.database}?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
+      username: ${shike.datasource.username}
+      password: ${shike.datasource.password}
   redis:
-    host: ${sky.redis.host}
-    port: ${sky.redis.port}
-    password: ${sky.redis.password}
-    database: ${sky.redis.database} #默认数据库是0，可不配置
+    host: ${shike.redis.host}
+    port: ${shike.redis.port}
+    password: ${shike.redis.password}
+    database: ${shike.redis.database} #默认数据库是0，可不配置
 
 mybatis:
   #mapper配置文件
@@ -29,12 +29,12 @@ mybatis:
 logging:
   level:
     com:
-      sky:
+      shike:
         mapper: debug
         service: info
         controller: info
 
-sky:
+shike:
   jwt:
     # 设置jwt签名加密时使用的秘钥
     admin-secret-key: itcast
@@ -46,24 +46,24 @@ sky:
     user-ttl: 7200000
     user-token-name: authentication
   alioss:
-    endpoint: ${sky.alioss.endpoint}
-    access-key-id: ${sky.alioss.access-key-id}
-    access-key-secret: ${sky.alioss.access-key-secret}
-    bucket-name: ${sky.alioss.bucket-name}
+    endpoint: ${shike.alioss.endpoint}
+    access-key-id: ${shike.alioss.access-key-id}
+    access-key-secret: ${shike.alioss.access-key-secret}
+    bucket-name: ${shike.alioss.bucket-name}
     # 设置上传文件大小限制
     max-size: 10485760
   wechat:
-    appid: ${sky.wx.app-id}
-    secret: ${sky.wx.app-secret}
-    mchid: ${sky.wx.mch-id}
-    mchSerialNo: ${sky.wx.mcg-serial-no}
-    privateKeyFilePath: ${sky.wx.private-key-path}
-    apiV3Key: ${sky.wx.api-v3-key}
-    weChatPayCertFilePath: ${sky.wx.wechat-pay-cert-path}
-    notifyUrl: ${sky.wx.notify-url}
-    refundNotifyUrl: ${sky.wx.refund-notify-url}
+    appid: ${shike.wx.app-id}
+    secret: ${shike.wx.app-secret}
+    mchid: ${shike.wx.mch-id}
+    mchSerialNo: ${shike.wx.mcg-serial-no}
+    privateKeyFilePath: ${shike.wx.private-key-path}
+    apiV3Key: ${shike.wx.api-v3-key}
+    weChatPayCertFilePath: ${shike.wx.wechat-pay-cert-path}
+    notifyUrl: ${shike.wx.notify-url}
+    refundNotifyUrl: ${shike.wx.refund-notify-url}
   shop:
-    address: ${sky.shop.address}
+    address: ${shike.shop.address}
   baidu:
-    ak: ${sky.baidu.ak}
+    ak: ${shike.baidu.ak}
 

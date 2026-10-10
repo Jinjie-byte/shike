@@ -139,7 +139,7 @@ public class OrderServiceImpl implements OrderService {
 ////        JSONObject jsonObject = weChatPayUtil.pay(
 ////                ordersPaymentDTO.getOrderNumber(), //商户订单号
 ////                new BigDecimal(0.01), //支付金额，单位 元
-////                "苍穹外卖订单", //商品描述
+////                "食刻外卖订单", //商品描述
 ////                user.getOpenid() //微信用户的openid
 ////        );
 
@@ -552,9 +552,9 @@ public class OrderServiceImpl implements OrderService {
         // 将该订单对应的所有菜品信息拼接在一起
         return String.join("", orderDishList);
     }
-    @Value("${sky.shop.address}")
+    @Value("${shike.shop.address}")
     public String shopAddress;
-    @Value("${sky.baidu.ak}")
+    @Value("${shike.baidu.ak}")
     public String ak;
     /**
      * 检查客户的收货地址是否超出配送范围

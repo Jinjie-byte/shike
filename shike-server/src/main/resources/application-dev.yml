@@ -1,9 +1,9 @@
-sky:
+shike:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     host: localhost
     port: 3306
-    database: sky_take_out
+    database: shike
     username: root
     password: REDACTED
   alioss:
@@ -12,18 +12,20 @@ sky:
     endpoint: oss-cn-beijing.aliyuncs.com
     bucket-name: java-webai-1xxxx
   redis:
-    host: 192.168.100.128
+    # 原为 192.168.100.128（教程作者的虚拟机），本机 Redis 在 localhost
+    host: localhost
     port: 6379
-    password: 123321
+    # 原为 123321，本机 Redis 无密码
+    password: ""
     database: 0
   wechat:
     appid: wxf2f3ec1435991131xxxxxxxxx
     secret: 80cc45346775bb1286bd3b5fa620d81cxxxxxxxx
     mchid: 1561414331
     mchSerialNo: 4B3B3DC35414AD50B1B755BAF8DE9CC7CF407606
-    privateKeyFilePath: D:\JavaEnv\JavaPro\sky-take-out\pay\apiclient_key.pem
+    privateKeyFilePath: D:\JavaEnv\JavaPro\shike\pay\apiclient_key.pem
     apiV3Key: CZBK51236435wxpay435434323FFDuv3
-    weChatPayCertFilePath: D:\JavaEnv\JavaPro\sky-take-out\pay\wechatpay_166D96F876F45C7D07CE98952A96EC980368ACFC.pem
+    weChatPayCertFilePath: D:\JavaEnv\JavaPro\shike\pay\wechatpay_166D96F876F45C7D07CE98952A96EC980368ACFC.pem
     notifyUrl: http://5a8ee066.r24.cpolar.top/notify/paySuccess
     refundNotifyUrl: https://5a8ee066.r24.cpolar.top/notify/refundSuccess
   shop:
