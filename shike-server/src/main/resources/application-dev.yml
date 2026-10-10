@@ -7,10 +7,11 @@ shike:
     username: root
     password: REDACTED
   alioss:
-    access-key-id: LTAI_REDACTED
-    access-key-secret: REDACTED
+    # 真实密钥在 application-local.yml（不进版本库）；这里是占位符，会被 local 覆盖
     endpoint: oss-cn-beijing.aliyuncs.com
-    bucket-name: java-webai-1xxxx
+    access-key-id: YOUR_ACCESS_KEY_ID
+    access-key-secret: YOUR_ACCESS_KEY_SECRET
+    bucket-name: YOUR_BUCKET_NAME
   redis:
     # 原为 192.168.100.128（教程作者的虚拟机），本机 Redis 在 localhost
     host: localhost

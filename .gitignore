@@ -18,3 +18,8 @@ node-modules/
 .vscode/
 .DS_Store
 *.log
+
+# ==================== 本机私密配置（2026-10-10）====================
+# 真实密钥 / 密码放 application-local.yml，不进版本库
+# （否则 push 到 GitHub 就全网公开了）
+application-local.yml

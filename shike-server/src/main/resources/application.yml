@@ -3,7 +3,10 @@ server:
 
 spring:
   profiles:
-    active: dev
+    # dev   = 通用开发配置（进版本库）
+    # local = 本机私密密钥（不进版本库，见根目录 .gitignore）
+    # 后加载的 local 会覆盖 dev 里的同名配置
+    active: dev,local
   main:
     allow-circular-references: true
   datasource:
