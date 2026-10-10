@@ -33,4 +33,8 @@ shike:
   shop:
     address: 北京市朝阳区北苑东路11号院
   baidu:
+    # 教程自带的 ak（无效）。本地开发直接关掉配送范围校验，
+    # 否则下单第一步就会抛「店铺地址解析失败」。
+    # 上线前：申请自己的 ak 填这里，并把 enable-range-check 改回 true
     ak: J4CqR7sM6djsOO3EEqHgzxpHY9GUJwxFXcxxxcccccccccccc
+    enable-range-check: false

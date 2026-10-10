@@ -65,7 +65,10 @@ public class OrderServiceImpl implements OrderService {
             throw new AddressBookBusinessException(MessageConstant.ADDRESS_BOOK_IS_NULL); //  收货地址为空
         }
         // 检查用户的收货地址是否超出配送范围
-        checkOutOfRange(addressBook.getCityName()+addressBook.getDistrictName()+addressBook.getDetail());
+        // 依赖百度地图 API；本地开发/演示可关闭（见 shike.baidu.enable-range-check）
+        if (enableRangeCheck) {
+            checkOutOfRange(addressBook.getCityName() + addressBook.getDistrictName() + addressBook.getDetail());
+        }
         // 2.查询当前用户购物车数据
         Long userId = BaseContext.getCurrentId();
         ShoppingCart shoppingCart = new ShoppingCart();
@@ -563,6 +566,15 @@ public class OrderServiceImpl implements OrderService {
     public String shopAddress;
     @Value("${shike.baidu.ak}")
     public String ak;
+    /**
+     * 是否启用"配送范围校验"。
+     * 该功能依赖百度地图开放平台接口，需要有效 ak + 外网。
+     * 本地开发 / 演示可设为 false（配置项：shike.baidu.enable-range-check）；
+     * 上线前申请到自己的 ak 后改回 true 即可。
+     * 冒号后的 true 是默认值：配置里不写这一项时按开启处理。
+     */
+    @Value("${shike.baidu.enable-range-check:true}")
+    private boolean enableRangeCheck;
     /**
      * 检查客户的收货地址是否超出配送范围
      * @param address
