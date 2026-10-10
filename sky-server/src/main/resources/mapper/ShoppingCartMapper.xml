@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
-<mapper namespace="com.sky.mapper.ShoppingCartMapper">
+<mapper namespace="com.shike.mapper.ShoppingCartMapper">
     <insert id="insertBatch">
         insert into shopping_cart
         (name, image, user_id, dish_id, setmeal_id, dish_flavor, number, amount, create_time)
@@ -11,7 +11,7 @@
         </foreach>
     </insert>
 
-    <select id="list" resultType="com.sky.entity.ShoppingCart">
+    <select id="list" resultType="com.shike.entity.ShoppingCart">
         select * from shopping_cart
         <where>
             <if test="userId != null">

@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="UTF-8" ?>
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
         "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
-<mapper namespace="com.sky.mapper.OrderMapper">
+<mapper namespace="com.shike.mapper.OrderMapper">
 
-    <insert id="insert" parameterType="com.sky.entity.Orders" useGeneratedKeys="true" keyProperty="id">
+    <insert id="insert" parameterType="com.shike.entity.Orders" useGeneratedKeys="true" keyProperty="id">
         insert into orders (number, status, user_id, address_book_id, order_time, checkout_time, pay_method, pay_status,
                             amount, remark, phone, address, consignee, estimated_delivery_time, delivery_status,
                             pack_amount, tableware_number, tableware_status)
@@ -11,7 +11,7 @@
                 #{amount}, #{remark}, #{phone}, #{address}, #{consignee}, #{estimatedDeliveryTime}, #{deliveryStatus},
                 #{packAmount}, #{tablewareNumber}, #{tablewareStatus})
     </insert>
-    <update id="update" parameterType="com.sky.entity.Orders">
+    <update id="update" parameterType="com.shike.entity.Orders">
         update orders
         <set>
             <if test="cancelReason != null and cancelReason!='' ">
@@ -41,7 +41,7 @@
         </set>
         where id = #{id}
     </update>
-    <select id="pageQuery" resultType="com.sky.entity.Orders">
+    <select id="pageQuery" resultType="com.shike.entity.Orders">
         select * from orders
         <where>
             <if test="number != null and number!=''">
@@ -95,7 +95,7 @@
             </if>
         </where>
     </select>
-    <select id="getSalesTop" resultType="com.sky.dto.GoodsSalesDTO">
+    <select id="getSalesTop" resultType="com.shike.dto.GoodsSalesDTO">
         select od.name,sum(od.number) number
         from order_detail od ,orders o
         where od.order_id = o.id and o.status = 5
