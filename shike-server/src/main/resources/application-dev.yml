@@ -5,7 +5,8 @@ shike:
     port: 3306
     database: shike
     username: root
-    password: REDACTED
+    # 真实密码在 application-local.yml（不进版本库）
+    password: YOUR_DB_PASSWORD
   alioss:
     # 真实密钥在 application-local.yml（不进版本库）；这里是占位符，会被 local 覆盖
     endpoint: oss-cn-beijing.aliyuncs.com
