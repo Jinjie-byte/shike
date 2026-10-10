@@ -1,0 +1,20 @@
+**/target/
+.idea
+*.iml
+*.class
+*Test.java
+**/test/
+
+# ==================== 以下为打基线时新增（2026-10-10）====================
+
+# 爬取时混入的无关项目（黑马点评），与苍穹外卖无关
+hm-dianping/
+
+# 小程序 npm 依赖目录（体积大，可由 npm install 重新生成）
+# 注意：mp-weixin/ 和 sky-server/src/main/resources/mp-weixin/ 下各有一份，故全局匹配
+node-modules/
+
+# IDE / 系统 / 日志
+.vscode/
+.DS_Store
+*.log
