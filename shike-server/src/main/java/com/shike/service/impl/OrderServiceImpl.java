@@ -78,6 +78,13 @@ public class OrderServiceImpl implements OrderService {
         // 3.用户下单后插入两张表：orders、orderDetail，订单明细表可能有多条信息
         Orders order = new Orders();
         BeanUtils.copyProperties(orderSubmitDTO, order);
+        BigDecimal packAmount = BigDecimal.ZERO;
+        for (ShoppingCart s : shoppingCartList) {
+            if (s.getAmount() != null) {
+                packAmount = packAmount.add(s.getAmount());
+            }
+        }
+        order.setAmount(packAmount);
         order.setOrderTime(LocalDateTime.now());
         order.setPayStatus(Orders.UN_PAID);
         order.setStatus(Orders.PENDING_PAYMENT);
