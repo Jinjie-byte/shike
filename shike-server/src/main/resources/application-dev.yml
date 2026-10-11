@@ -23,6 +23,9 @@ shike:
   wechat:
     appid: wxf2f3ec1435991131xxxxxxxxx
     secret: 80cc45346775bb1286bd3b5fa620d81cxxxxxxxx
+    # 本地演示开关：true = 跳过微信 jscode2session，直接返回 mock-openid（上线必须改回 false）
+    enable-mock: true
+    mock-openid: mock-openid-demo-001
     mchid: 1561414331
     mchSerialNo: 4B3B3DC35414AD50B1B755BAF8DE9CC7CF407606
     privateKeyFilePath: D:\JavaEnv\JavaPro\shike\pay\apiclient_key.pem

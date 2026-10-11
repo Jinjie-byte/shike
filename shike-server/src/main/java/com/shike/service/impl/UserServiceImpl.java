@@ -10,6 +10,7 @@ import com.shike.properties.JwtProperties;
 import com.shike.properties.WeChatProperties;
 import com.shike.service.UserService;
 import com.shike.utils.HttpClientUtil;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -17,6 +18,7 @@ import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 
+@Slf4j
 @Service
 public class UserServiceImpl implements UserService {
     @Autowired
@@ -55,6 +57,11 @@ public class UserServiceImpl implements UserService {
      * @return  openid
      */
     public String getOpenId(String code) {
+        // 开发开关：本地演示时跳过微信接口，直接返回固定 openid（appid/secret 为占位符时微信会返回 40013）
+        if (weChatProperties.isEnableMock()) {
+            log.warn("微信登录处于 mock 模式，跳过 jscode2session，直接返回 openid={}", weChatProperties.getMockOpenid());
+            return weChatProperties.getMockOpenid();
+        }
         // 调用微信接口服务，获取当前用户的openid
         Map<String, String> map = new HashMap<>();
         map.put("appid", weChatProperties.getAppid());
