@@ -40,8 +40,8 @@
     "disableSWC": true
   },
   "compileType": "miniprogram",
-  "libVersion": "2.24.2",
-  "appid": "wxf2f3ec1435991131",
+  "libVersion": "3.8.4",
+  "appid": "wx419ae20f4474a761",
   "projectname": "shike",
   "condition": {},
   "editorSetting": {
