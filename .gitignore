@@ -23,3 +23,11 @@ node-modules/
 # 真实密钥 / 密码放 application-local.yml，不进版本库
 # （否则 push 到 GitHub 就全网公开了）
 application-local.yml
+
+# ==================== admin-web 装依赖踩坑留下的产物（2026-10-11 清理）====
+# 背景：npm 10 严格 peer 校验导致 install 崩，当时用 mv 改名绕开 rm 的安全策略，
+# 于是留下 node_modules_broken_* / node_modules_drift_* 两个人造目录（共 3.6 万文件）。
+# 已删除，这里加规则防止以后再被 git add 带进来。
+node_modules_*/
+*.bak_*
+report.*.json
