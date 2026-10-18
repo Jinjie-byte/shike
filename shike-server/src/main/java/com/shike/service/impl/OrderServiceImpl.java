@@ -81,13 +81,19 @@ public class OrderServiceImpl implements OrderService {
         // 3.用户下单后插入两张表：orders、orderDetail，订单明细表可能有多条信息
         Orders order = new Orders();
         BeanUtils.copyProperties(orderSubmitDTO, order);
-        BigDecimal packAmount = BigDecimal.ZERO;
+
+        // ★ 改造 1：金额一律服务端重算，不信任前端传来的 amount（防价格篡改）
+        //
+        // ★★ 注意：shopping_cart.amount 存的是【单价】，不是小计（见 addShoppingCart：
+        //    setAmount(dish.getPrice()) + setNumber(1)，重复加购只 updateNumberById）。
+        //    所以必须 × number，否则"点 2 份只算 1 份的钱"。
+        BigDecimal totalAmount = BigDecimal.ZERO;
         for (ShoppingCart s : shoppingCartList) {
-            if (s.getAmount() != null) {
-                packAmount = packAmount.add(s.getAmount());
+            if (s.getAmount() != null && s.getNumber() != null) {
+                totalAmount = totalAmount.add(s.getAmount().multiply(BigDecimal.valueOf(s.getNumber())));
             }
         }
-        order.setAmount(packAmount);
+        order.setAmount(totalAmount);
         order.setOrderTime(LocalDateTime.now());
         order.setPayStatus(Orders.UN_PAID);
         order.setStatus(Orders.PENDING_PAYMENT);
@@ -104,6 +110,10 @@ public class OrderServiceImpl implements OrderService {
             OrderDetail orderDetail = new OrderDetail();
             BeanUtils.copyProperties(cart, orderDetail);
             orderDetail.setOrderId(order.getId()); //  设置订单id
+            // 明细里的 amount 要是【小计】（单价 × 数量），否则凭据和后台列表金额都对不上
+            if (cart.getAmount() != null && cart.getNumber() != null) {
+                orderDetail.setAmount(cart.getAmount().multiply(BigDecimal.valueOf(cart.getNumber())));
+            }
             orderDetailList.add(orderDetail);
         }
         orderDetailMapper.insertBatch(orderDetailList);

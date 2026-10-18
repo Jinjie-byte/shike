@@ -91,22 +91,37 @@ public class ShoppingCartServiceImpl implements ShoppingCartService {
 
 
     /**
-     * 减少购物车商品数量
-     * @param shoppingCartDTO
+     * 减少购物车商品数量（减到 0 就删掉这一行）
+     *
+     * ★ 原实现有三个 bug，2026-10-18 修正：
+     *   ① 只按 dishId 查 —— **不分用户**，张三减购会减到李四的行
+     *   ② 只认 dishId —— 套餐（只有 setmealId）会查出 null 然后 NPE
+     *   ③ 删除时把 dishId 当成购物车主键 id 传 —— 删错行（除非两个 id 恰好相同）
+     *
+     * 现在统一走 mapper.list 的动态条件（userId + dish/setmeal + 口味），
+     * 删除用购物车行自己的 id。
      */
     @Override
     public void subNumber(ShoppingCartDTO shoppingCartDTO) {
-        // 1.根据id查询购物车数据
-        Long dishId = shoppingCartDTO.getDishId();
-        ShoppingCart shoppingCart = shoppingCartMapper.getByDishId(dishId);
-        if (shoppingCart.getNumber() == 1){
-            shoppingCartMapper.deleteById(dishId);
-        }else if (shoppingCart.getNumber() > 1){
-            shoppingCart.setNumber(shoppingCart.getNumber() - 1);
-            shoppingCartMapper.updateNumberById(shoppingCart);
-        }else{
-            throw new RuntimeException("不能再减了");
+        ShoppingCart query = new ShoppingCart();
+        query.setUserId(BaseContext.getCurrentId());
+        query.setDishId(shoppingCartDTO.getDishId());
+        query.setSetmealId(shoppingCartDTO.getSetmealId());
+        query.setDishFlavor(shoppingCartDTO.getDishFlavor());
+
+        List<ShoppingCart> list = shoppingCartMapper.list(query);
+        if (list == null || list.isEmpty()) {
+            throw new RuntimeException("购物车里没有这件商品");
         }
 
+        ShoppingCart cart = list.get(0);
+        if (cart.getNumber() <= 1) {
+            // ★ 用 deleteByCartId（按主键删），不能用 deleteById ——
+            //   后者的 SQL 是 `where dish_id = ?`，套餐行没有 dish_id，删不掉
+            shoppingCartMapper.deleteByCartId(cart.getId());
+        } else {
+            cart.setNumber(cart.getNumber() - 1);
+            shoppingCartMapper.updateNumberById(cart);
+        }
     }
 }

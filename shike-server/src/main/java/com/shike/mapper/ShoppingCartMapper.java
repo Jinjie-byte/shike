@@ -57,4 +57,14 @@ public interface ShoppingCartMapper {
      */
     @Delete("delete from shopping_cart where dish_id = #{dishId}")
     void deleteById(Long dishId);
+
+    /**
+     * 按【购物车行主键】删除。
+     *
+     * 注意区分：上面的 deleteById 虽然名字像按 id 删，SQL 其实是 `where dish_id = #{dishId}`
+     * —— 套餐行没有 dish_id，用它删不掉，而且也不分用户。
+     * 需要精确删除某一行时用这个方法。
+     */
+    @Delete("delete from shopping_cart where id = #{id}")
+    void deleteByCartId(Long id);
 }
