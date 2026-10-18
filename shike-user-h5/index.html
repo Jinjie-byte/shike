@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<meta name="format-detection" content="telephone=no">
+<title>食刻外卖</title>
+<link rel="icon" type="image/svg+xml" href="static/favicon.svg">
+<link rel="stylesheet" href="css/style.css?v=20261018h">
+<link rel="stylesheet" href="css/h5.css?v=20261018h">
+</head>
+<body>
+
+<div id="app">
+  <!-- ============ 顶部导航（模拟小程序的导航栏）============ -->
+  <div class="h5-navbar">
+    <span class="h5-nav-back" v-if="canBack" @click="goBack">‹</span>
+    <span class="h5-navbar-title">{{ title }}</span>
+  </div>
+
+  <!-- ============ 首页 ============ -->
+  <div class="h5-page" v-show="page === 'home'">
+    <div class="home_content">
+      <div class="restaurant_info_box">
+        <div class="restaurant_info">
+          <div class="info_top">
+            <div class="info_top_left">
+              <!-- 食刻自己的 logo：内联 SVG，不依赖任何外部图片 -->
+              <svg class="brand-logo" viewBox="0 0 56 56" role="img" aria-label="食刻">
+                <defs>
+                  <linearGradient id="shikeLogoGrad" x1="0" y1="0" x2="0.35" y2="1">
+                    <stop offset="0" stop-color="#FFA63E"/>
+                    <stop offset="1" stop-color="#EF5B2B"/>
+                  </linearGradient>
+                </defs>
+                <clipPath id="shikeLogoClip"><rect width="56" height="56" rx="15"/></clipPath>
+                <rect width="56" height="56" rx="15" fill="url(#shikeLogoGrad)"/>
+                <g clip-path="url(#shikeLogoClip)">
+                  <ellipse cx="16" cy="8" rx="30" ry="17" fill="#ffffff" opacity="0.16"/>
+                </g>
+                <text x="28" y="28" text-anchor="middle" dominant-baseline="central"
+                      font-size="31" font-weight="700" fill="#ffffff"
+                      font-family="'PingFang SC','Microsoft YaHei','Hiragino Sans GB',sans-serif">食</text>
+              </svg>
+            </div>
+            <div class="info_top_right">
+              <div class="right_title">
+                <span>食刻外卖</span>
+                <div class="businessStatus" v-if="shopStatus === 1">营业中</div>
+                <div class="businessStatus close" v-else>休息中</div>
+              </div>
+              <div class="right_details">
+                <div class="details_flex">
+                  <svg class="top_icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 21s6.5-5.6 6.5-10.5a6.5 6.5 0 1 0-13 0C5.5 15.4 12 21 12 21Z"/>
+                    <circle cx="12" cy="10.5" r="2.4"/>
+                  </svg>
+                  <span class="icon_text">距离1.5km</span>
+                </div>
+                <div class="details_flex">
+                  <svg class="top_icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="8.5"/>
+                    <path d="M8.6 9.2 12 13.2l3.4-4M12 13.2V17M9.6 13.6h4.8M9.6 15.2h4.8"/>
+                  </svg>
+                  <span class="icon_text">配送费6元</span>
+                </div>
+                <div class="details_flex test">
+                  <svg class="top_icon" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                       stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="8.5"/>
+                    <path d="M12 7.4V12l3.2 1.9"/>
+                  </svg>
+                  <span class="icon_text">预计时长12min</span>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="info_bottom">
+            <div>
+              <div class="word">食刻餐厅为顾客打造专业的大众化美食外送餐饮</div>
+              <div class="address">北京市朝阳区新街大道一号楼8层</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="restaurant_menu_list">
+        <!-- 左侧分类 -->
+        <div class="type_list">
+          <div class="menu-scroll-view">
+            <div v-for="(item, i) in typeListData" :key="i"
+                 class="type_item" :class="{active: typeIndex === i}"
+                 @click="switchType(i)">
+              <div class="item" :class="{allLine: (item.name || '').length > 5}">{{ item.name }}</div>
+            </div>
+            <div class="seize_seat"></div>
+          </div>
+        </div>
+
+        <!-- 右侧菜品 -->
+        <div class="vegetable_order_list">
+          <template v-if="dishListItems.length > 0">
+            <div v-for="d in dishListItems" :key="d.id" class="type_item">
+              <div class="dish_img" @click="openDishDetail(d)">
+                <img class="dish_img_url" :src="d.image" alt="" @error="onDishImgError(d, $event)">
+              </div>
+              <div class="dish_info">
+                <div class="dish_name" @click="openDishDetail(d)">{{ d.name }}</div>
+                <div class="dish_label">{{ d.description || d.name }}</div>
+                <div class="dish_price"><span class="ico">￥</span>{{ money(d.price) }}</div>
+                <div class="dish_active">
+                  <img v-if="d.dishNumber >= 1" class="dish_red" src="static/btn_red.png" alt="" @click="subDish(d)">
+                  <span v-if="d.dishNumber > 0" class="dish_number">{{ d.dishNumber }}</span>
+                  <img class="dish_add" src="static/btn_add.png" alt="" @click="addDish(d)">
+                </div>
+              </div>
+            </div>
+          </template>
+          <div v-if="loading && !dishListItems.length" class="dish-skeleton">
+            <div class="sk-row" v-for="i in 3" :key="i">
+              <div class="sk-img"></div>
+              <div class="sk-lines"><div class="sk-l1"></div><div class="sk-l2"></div><div class="sk-l3"></div></div>
+            </div>
+          </div>
+          <div v-else-if="!dishListItems.length" class="no_dish">
+            <div class="no_dish_icon">🍽️</div>
+            <div>该分类下暂无菜品</div>
+          </div>
+          <div class="seize_seat"></div>
+        </div>
+      </div>
+
+      <!-- 底部结算栏（★ 必须在 .home_content 内部：样式选择器是 .home_content .footer_order_buttom） -->
+      <div class="footer_order_buttom" :class="{order_form: cartCount > 0}">
+        <div class="order_number" @click="openCart">
+          <span class="order_dish_num" v-if="cartCount > 0">{{ cartCount }}</span>
+          <img class="order_number_icon"
+               :src="cartCount > 0 ? 'static/btn_waiter_sel.png' : 'static/btn_waiter_nor.png'" alt="">
+        </div>
+        <div class="order_price"><span class="ico">￥</span>{{ money(cartTotal) }}</div>
+        <div class="order_but" @click="goOrder">去结算</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 结算页 ============ -->
+  <div class="h5-page" v-show="page === 'order'">
+    <div class="checkout">
+      <!-- 收货地址 -->
+      <div class="co-card co-addr" v-if="address" @click="goAddress">
+        <div class="co-addr-name">{{ address.consignee }}
+          <span class="co-addr-phone">{{ address.phone }}</span>
+        </div>
+        <div class="co-addr-detail">{{ address.detail }}</div>
+      </div>
+      <div class="co-card" v-else @click="goAddress">
+        <div class="co-empty">还没有收货地址，点这里添加 ›</div>
+      </div>
+
+      <!-- 商品清单 -->
+      <div class="co-card">
+        <div class="co-title">商品清单</div>
+        <div v-for="c in cart" :key="c.id" class="co-item">
+          <span class="co-item-name">{{ c.name }}</span>
+          <span class="co-item-num">×{{ c.number }}</span>
+          <span class="co-item-amt">￥{{ money(Number(c.amount || 0) * (c.number || 1)) }}</span>
+        </div>
+        <div class="co-total">合计 <b>￥{{ money(cartTotal) }}</b></div>
+      </div>
+
+      <!-- 备注 -->
+      <div class="co-card">
+        <div class="co-title">备注</div>
+        <input v-model="remark" class="co-remark" placeholder="口味、忌口等（选填）">
+      </div>
+
+      <div class="co-bar">
+        <div class="co-bar-price"><span>￥</span>{{ money(cartTotal) }}</div>
+        <button class="co-submit" :disabled="submitting" @click="submitOrder">
+          {{ submitting ? '提交中…' : '提交订单' }}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ AI 点单 ============ -->
+  <div class="h5-page" v-show="page === 'ai'">
+    <div class="ai-chat">
+      <div class="ai-tip">
+        <span>AI 会根据你的口味，从食刻真实菜单里推荐菜品</span>
+        <button class="ai-reset" @click="resetAi">新对话</button>
+      </div>
+      <div class="chat-list" ref="chatList">
+        <div v-for="(m, i) in aiMessages" :key="i" class="chat-item" :class="m.role">
+          <div class="chat-avatar">{{ m.role === 'user' ? '我' : 'AI' }}</div>
+          <div class="chat-bubble">{{ m.text }}</div>
+        </div>
+        <div v-if="aiLoading" class="chat-item ai">
+          <div class="chat-avatar">AI</div>
+          <div class="chat-bubble typing"><span></span><span></span><span></span></div>
+        </div>
+      </div>
+      <!-- 底部购物车栏：AI 会在后台加购，这里必须能看到结果 -->
+      <div class="ai-cart">
+        <div class="ai-cart-main" @click="openCart">
+          <span class="ai-cart-iconbox">
+            <img :src="cartCount > 0 ? 'static/btn_waiter_sel.png' : 'static/btn_waiter_nor.png'" alt="">
+            <span class="ai-cart-count" v-if="cartCount > 0">{{ cartCount }}</span>
+          </span>
+          <span class="ai-cart-total">￥{{ money(cartTotal) }}</span>
+        </div>
+        <button class="ai-cart-btn" :disabled="cartCount === 0" @click="goOrder">去结算</button>
+      </div>
+
+      <div class="chat-input-bar">
+        <input v-model="aiInput" class="chat-input" placeholder="说说你想吃什么…"
+               @keyup.enter="sendAi">
+        <button class="chat-send" :disabled="aiLoading" @click="sendAi">发送</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 我的 ============ -->
+  <div class="h5-page" v-show="page === 'my'">
+    <div class="my-box">
+      <div class="my-head">
+        <div class="my-avatar">{{ (userInfo.name || '食').charAt(0) }}</div>
+        <div class="my-info">
+          <div class="my-name">{{ userInfo.name || '食刻用户' }}</div>
+          <div class="my-sub">{{ userInfo.phone || '欢迎回来，今天想吃点什么？' }}</div>
+        </div>
+      </div>
+      <div class="my-list">
+        <div class="my-item" @click="goAddress">
+          <span class="my-icon ico-addr">📍</span>
+          <span class="my-text">
+            <span class="my-title">地址管理</span>
+            <span class="my-desc">管理收货地址与默认地址</span>
+          </span>
+          <span class="my-arrow">›</span>
+        </div>
+        <div class="my-item" @click="loadHistory">
+          <span class="my-icon ico-order">📋</span>
+          <span class="my-text">
+            <span class="my-title">历史订单</span>
+            <span class="my-desc">查看过往订单与配送状态</span>
+          </span>
+          <span class="my-arrow">›</span>
+        </div>
+      </div>
+      <div v-if="historyList.length" class="my-orders">
+        <div class="my-orders-title">最近订单</div>
+        <div v-for="o in historyList" :key="o.id" class="my-order-item" @click="openOrderDetail(o)">
+          <div class="mo-main">
+            <div class="oi-top"><span>{{ o.number }}</span><b>{{ money(o.amount) }}</b></div>
+            <div class="oi-sub">{{ o.orderTime }} · {{ o.statusText }}</div>
+          </div>
+          <span class="my-arrow">›</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 地址管理 ============ -->
+  <div class="h5-page" v-show="page === 'address'">
+    <div class="addr-list">
+      <div v-for="a in addressList" :key="a.id" class="addr-card" @click="useAddress(a)">
+        <div class="addr-top">
+          <span class="addr-name">{{ a.consignee }}</span>
+          <span class="addr-phone">{{ a.phone }}</span>
+          <span class="addr-tag" v-if="a.isDefault === 1">默认</span>
+          <span class="addr-tag gray" v-else-if="a.label">{{ a.label }}</span>
+        </div>
+        <div class="addr-detail">{{ a.detail }}</div>
+        <div class="addr-ops">
+          <button class="addr-op" v-if="a.isDefault !== 1" @click.stop="setDefaultAddr(a)">设为默认</button>
+          <button class="addr-op" @click.stop="editAddress(a)">编辑</button>
+          <button class="addr-op danger" @click.stop="removeAddress(a)">删除</button>
+        </div>
+      </div>
+      <div v-if="!addressList.length" class="addr-empty">还没有收货地址</div>
+      <button class="addr-add" @click="newAddress">＋ 新增收货地址</button>
+    </div>
+  </div>
+
+  <!-- ============ 新增 / 编辑地址 ============ -->
+  <div class="h5-page" v-show="page === 'addrEdit'">
+    <div class="checkout">
+      <div class="co-card">
+        <div class="co-form">
+          <input v-model="addrForm.consignee" placeholder="联系人">
+          <input v-model="addrForm.phone" placeholder="手机号" inputmode="tel">
+          <input v-model="addrForm.detail" placeholder="收货地址（省市区 + 门牌号）">
+          <div class="addr-labels">
+            <span v-for="l in ADDR_LABELS" :key="l"
+                  class="addr-label" :class="{on: addrForm.label === l}"
+                  @click="addrForm.label = l">{{ l }}</span>
+          </div>
+          <button class="co-save" @click="saveAddrForm">保存地址</button>
+          <button class="co-del" v-if="editingId" @click="removeEditing">删除地址</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 订单详情 ============ -->
+  <div class="h5-page" v-show="page === 'orderDetail'">
+    <div class="checkout" v-if="orderDetail">
+      <div class="od-status">{{ statusText(orderDetail.status) }}</div>
+
+      <div class="co-card">
+        <div class="co-title">收货信息</div>
+        <div class="co-addr-name">{{ orderDetail.consignee }}</div>
+        <div class="co-addr-detail">{{ orderDetail.phone }}</div>
+        <div class="co-addr-detail">{{ orderDetail.address }}</div>
+      </div>
+
+      <div class="co-card">
+        <div class="co-title">商品</div>
+        <div v-for="d in orderDetail.orderDetailList" :key="d.id" class="co-item">
+          <span class="co-item-name">{{ d.name }}<i v-if="d.dishFlavor" class="od-flavor">{{ d.dishFlavor }}</i></span>
+          <span class="co-item-num">×{{ d.number }}</span>
+          <span class="co-item-amt">￥{{ money(d.amount) }}</span>
+        </div>
+        <div class="co-total">合计 <b>￥{{ money(orderDetail.amount) }}</b></div>
+      </div>
+
+      <div class="co-card">
+        <div class="co-title">订单信息</div>
+        <div class="od-meta">订单号：{{ orderDetail.number }}</div>
+        <div class="od-meta">下单时间：{{ orderDetail.orderTime }}</div>
+        <div class="od-meta" v-if="orderDetail.remark">备注：{{ orderDetail.remark }}</div>
+      </div>
+
+      <div class="co-card od-ops">
+        <button class="od-btn" v-if="orderDetail.status === 1" @click="paidCurrent">立即支付</button>
+        <button class="od-btn" v-if="orderDetail.status === 1" @click="cancelCurrent">取消订单</button>
+        <button class="od-btn" v-if="orderDetail.status >= 2 && orderDetail.status <= 4" @click="remindCurrent">催单</button>
+        <button class="od-btn primary" v-if="orderDetail.status >= 2" @click="againCurrent">再来一单</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 下单成功 ============ -->
+  <div class="h5-page" v-show="page === 'success'">
+    <div class="succ">
+      <div class="succ-icon">✓</div>
+      <div class="succ-title">下单成功</div>
+      <div class="succ-sub" v-if="lastOrder">预计 {{ lastOrder.eta }} 送达</div>
+      <div class="succ-sub">后厨已开始备餐，请耐心等待</div>
+      <div class="succ-order" v-if="lastOrder">订单号 {{ lastOrder.orderNumber }}</div>
+      <div class="succ-btns">
+        <button class="od-btn" @click="go('home')">返回首页</button>
+        <button class="od-btn primary" @click="viewLastOrder">查看订单</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 购物车弹层 ============ -->
+  <div class="pop-mask" v-show="showCart" @click="closeCart">
+    <div class="cart-pop" @click.stop>
+      <div class="cart-pop-head">
+        <span>购物车</span>
+        <span class="cart-clear" @click="clearCart">清空</span>
+      </div>
+      <div class="cart-pop-list">
+        <div v-for="c in cart" :key="c.id" class="cart-row">
+          <div class="cart-row-name">
+            {{ c.name }}<i v-if="c.dishFlavor" class="od-flavor">{{ c.dishFlavor }}</i>
+          </div>
+          <div class="cart-row-right">
+            <span class="cart-row-amt">￥{{ money(Number(c.amount || 0) * (c.number || 1)) }}</span>
+            <img class="cart-btn" src="static/btn_red.png" alt="" @click="cartSub(c)">
+            <span class="cart-num">{{ c.number }}</span>
+            <img class="cart-btn" src="static/btn_add.png" alt="" @click="cartAdd(c)">
+          </div>
+        </div>
+      </div>
+      <div class="cart-pop-foot">
+        <span class="cart-total">合计 <b>￥{{ money(cartTotal) }}</b></span>
+        <button class="co-submit" @click="checkoutFromCart">去结算</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 菜品详情 / 选口味 ============ -->
+  <div class="pop-mask" v-show="showDish" @click="closeDish">
+    <div class="dish-pop" @click.stop>
+      <div class="dish-pop-imgbox">
+        <img class="dish-pop-img" :src="dishDetail && dishDetail.image" alt=""
+             @error="onPopImgError">
+      </div>
+      <div class="dish-pop-body">
+        <div class="dish-pop-name">{{ dishDetail && dishDetail.name }}</div>
+        <div class="dish-pop-desc">{{ dishDetail && dishDetail.description }}</div>
+        <div class="dish-pop-price">￥{{ dishDetail ? money(dishDetail.price) : '0.00' }}</div>
+        <div v-for="f in ((dishDetail && dishDetail.flavors) || [])" :key="f.id" class="flavor-group">
+          <div class="flavor-name">{{ f.name }}</div>
+          <div class="flavor-vals">
+            <span v-for="v in parseFlavors(f.value)" :key="v"
+                  class="flavor-val" :class="{on: flavorSel[f.name] === v}"
+                  @click="pickFlavor(f.name, v)">{{ v }}</span>
+          </div>
+        </div>
+      </div>
+      <div class="dish-pop-foot">
+        <button class="co-submit" @click="addWithFlavor">加入购物车</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============ 底部 tab ============ -->
+  <div class="h5-tabbar">
+    <div class="h5-tab" :class="{on: page==='home'}" @click="go('home')">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <path d="M6.5 3h11A2.5 2.5 0 0 1 20 5.5v13a2.5 2.5 0 0 1-2.5 2.5h-11A2.5 2.5 0 0 1 4 18.5v-13A2.5 2.5 0 0 1 6.5 3Zm1 4a1 1 0 0 0 0 2h9a1 1 0 1 0 0-2h-9Zm0 4a1 1 0 0 0 0 2h9a1 1 0 1 0 0-2h-9Zm0 4a1 1 0 0 0 0 2h5.5a1 1 0 1 0 0-2H7.5Z"/>
+      </svg>
+      <span>点餐</span>
+    </div>
+    <div class="h5-tab" :class="{on: page==='ai'}" @click="go('ai')">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+           stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 11.4c0 3.6-4 6.4-9 6.4-.95 0-1.87-.11-2.72-.31L5 20l1.1-3.3C4.2 15.4 3 13.6 3 11.4 3 7.8 7 5 12 5s9 2.8 9 6.4Z"/>
+        <path d="M12 8.3l.78 1.86 1.87.79-1.87.78L12 13.6l-.78-1.87-1.87-.78 1.87-.79L12 8.3Z"
+              fill="currentColor" stroke="none"/>
+      </svg>
+      <span>AI 点单</span>
+    </div>
+    <div class="h5-tab" :class="{on: page==='my'}" @click="go('my')">
+      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+        <circle cx="12" cy="8" r="3.6"/>
+        <path d="M12 13.2c-3.9 0-7 2.2-7 4.9 0 .95.75 1.7 1.7 1.7h10.6c.95 0 1.7-.75 1.7-1.7 0-2.7-3.1-4.9-7-4.9Z"/>
+      </svg>
+      <span>我的</span>
+    </div>
+  </div>
+
+  <div class="h5-toast" v-show="toast">{{ toast }}</div>
+</div>
+
+<script src="static/vue.global.prod.js"></script>
+<script src="js/app.js?v=20261018h"></script>
+</body>
+</html>

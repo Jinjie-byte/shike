@@ -1,0 +1,1074 @@
+/* ============================================================
+   食刻用户端 H5 —— 补充样式
+   移植自 mp-weixin 的 style.css 已经是主体，这里只补三件事：
+     1. 小程序的导航栏（H5 里要自己做）
+     2. 固定定位的 tabbar / 结算栏
+     3. 滚动区域的高度（小程序用 scroll-view，H5 用 overflow）
+   ============================================================ */
+
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  background: #f8f8f8;
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  color: #333;
+}
+
+/* 用一个手机宽度的容器居中，PC 上打开也像手机。
+   ★ 宽度必须和 style.css 的设计稿一致（750rpx = 375px）。
+     之前这里写 480px、而 style.css 用 vw，导致"容器 480px、字号按窗口宽度算"→ 全乱。 */
+body {
+  max-width: 375px;
+  margin: 0 auto;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 0 12px rgba(0, 0, 0, .08);
+}
+
+@media (max-width: 375px) {
+  body { max-width: 100%; box-shadow: none; }
+}
+
+#app { height: 100vh; display: flex; flex-direction: column; }
+
+/* 小程序里信息卡是绝对定位、菜单靠 margin-top 硬留位置。
+   H5 用 flex 排版，就让它变成普通流元素，高度自然撑开 —— 不再依赖魔法数字。 */
+.home_content .restaurant_info_box .restaurant_info {
+  position: relative;
+  top: auto;
+  left: auto;
+  width: auto;
+  margin: 5px 15px 0;
+}
+.home_content .restaurant_menu_list { margin-top: 0; }
+
+/* 结算栏：style.css 里是 position:fixed + width:calc(100% - 30px)，
+   fixed 是相对【视口】的，在电脑上会跑到屏幕左边。改成相对页面绝对定位。 */
+.home_content .footer_order_buttom {
+  position: absolute;
+  left: 15px;
+  right: 15px;
+  width: auto;
+  bottom: 8px;
+}
+
+/* 图片兜底：小程序里 logo 用 <image> 标签，H5 换成 <img> 后那条规则不生效，
+   不限制就会按原图尺寸撑开。 */
+.home_content .restaurant_info_box .restaurant_info .info_top .info_top_left img {
+  width: 43px;
+  height: 43px;
+  display: block;
+}
+
+/* 三个小图标（距离/配送费/时长）原本 nowrap，一行排不下就顶出卡片外 */
+.home_content .restaurant_info_box .restaurant_info .info_top .info_top_right .right_details {
+  flex-wrap: wrap;
+  row-gap: 2px;
+}
+
+img { max-width: 100%; }
+
+/* 菜品图兜底：教程那套 OSS 桶已失效（全部 403），加载失败时用菜名首字顶上。
+   比一张统一的灰色占位图更像"设计过"，也不会空一块。 */
+.dish_img { position: relative; }
+.dish_img.img-fallback { height: 86px; }
+.dish_img.img-fallback::after {
+  content: attr(data-initial);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #fde7dc, #f7c9b6);
+  color: #E95F3C;
+  font-size: 26px;
+  font-weight: 600;
+  border-radius: 4px;
+}
+
+/* ---------- 1. 顶部导航栏（小程序的 navigationBar）---------- */
+.h5-navbar {
+  height: 44px;
+  flex: 0 0 44px;
+  background: #E95F3C;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 17px;
+  font-weight: 500;
+  position: relative;
+  z-index: 20;
+}
+.h5-navbar-title { letter-spacing: 1px; }
+
+/* ---------- 页面容器 ---------- */
+.h5-page {
+  flex: 1 1 auto;
+  overflow: hidden;
+  position: relative;
+}
+
+/* 小程序里 .home_content 顶部留了 21.33vw（给导航栏），H5 已有导航栏，去掉 */
+.home_content { padding-top: 0 !important; height: 100%; }
+
+/* ---------- 首页布局：上店铺信息 / 下菜单 ---------- */
+.h5-page .home_content {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.home_content .restaurant_info_box { flex: 0 0 auto; }
+
+/* 菜单区：左右分栏，各自可滚动 */
+.home_content .restaurant_menu_list {
+  flex: 1 1 auto;
+  display: flex;
+  overflow: hidden;
+  min-height: 0;
+  /* style.css 里是 calc(100vh - 130px)，那是给"绝对定位信息卡"留位置的算法；
+     这里已经改成 flex 布局，高度由父容器分配，必须清掉。 */
+  height: auto;
+}
+.home_content .restaurant_menu_list .type_list {
+  flex: 0 0 auto;
+  width: 84px;            /* 168rpx = 84px，和 style.css 一致（原来写 24vw 会被窗口宽度带跑） */
+  overflow-y: auto;
+  background: #f6f6f6;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 小程序里两列都有 padding-top:70px，那是给"绝对定位的信息卡"腾位置的。
+   这里的卡片已经在正常流里了，不清掉就会空出 70px 的空白。 */
+.home_content .restaurant_menu_list .type_list,
+.home_content .restaurant_menu_list .vegetable_order_list {
+  padding-top: 0;
+}
+/* 给底部结算栏留出空间，最后一道菜不会被遮住 */
+.home_content .restaurant_menu_list .vegetable_order_list {
+  padding-bottom: 64px;
+}
+.home_content .restaurant_menu_list .menu-scroll-view { height: auto; }
+
+.home_content .restaurant_menu_list .vegetable_order_list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* 底部结算栏：固定在页面底部（tabbar 之上） */
+.footer_order_buttom {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 12;
+}
+
+/* ---------- 2. 底部 tabbar ---------- */
+.h5-tabbar {
+  flex: 0 0 50px;
+  height: 50px;
+  display: flex;
+  background: #fff;
+  border-top: 1px solid #eee;
+  z-index: 20;
+}
+.h5-tab {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  font-size: 11px;
+  color: #818693;
+  cursor: pointer;
+}
+.h5-tab img { width: 20px; height: 20px; object-fit: contain; opacity: .55; }
+.h5-tab.on { color: #E95F3C; }
+.h5-tab.on img { opacity: 1; }
+
+/* ---------- 3. AI 点单页 ---------- */
+.ai-chat {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background: #f6f6f6;
+}
+.ai-tip {
+  flex: 0 0 auto;
+  background: #FFF8E1;
+  color: #8a6d3b;
+  font-size: 12px;
+  padding: 8px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.ai-reset {
+  flex: 0 0 auto;
+  border: 1px solid #E95F3C;
+  background: transparent;
+  color: #E95F3C;
+  font-size: 12px;
+  padding: 2px 10px;
+  border-radius: 10px;
+}
+.chat-list {
+  flex: 1 1 auto;
+  overflow-y: auto;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.chat-item { display: flex; gap: 8px; align-items: flex-start; }
+.chat-item.user { flex-direction: row-reverse; }
+.chat-avatar {
+  flex: 0 0 32px;
+  width: 32px; height: 32px;
+  border-radius: 50%;
+  background: #E95F3C;
+  color: #fff;
+  font-size: 12px;
+  display: flex; align-items: center; justify-content: center;
+}
+.chat-item.user .chat-avatar { background: #ffc200; color: #7a5c00; }
+.chat-bubble {
+  max-width: 72%;
+  background: #fff;
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+}
+.chat-item.user .chat-bubble { background: #ffe9d6; }
+.chat-bubble.typing span {
+  display: inline-block; width: 6px; height: 6px; margin-right: 4px;
+  background: #bbb; border-radius: 50%;
+  animation: blink 1.2s infinite;
+}
+.chat-bubble.typing span:nth-child(2) { animation-delay: .2s; }
+.chat-bubble.typing span:nth-child(3) { animation-delay: .4s; }
+@keyframes blink { 0%,60%,100% { opacity:.3 } 30% { opacity:1 } }
+
+.chat-input-bar {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #fff;
+  border-top: 1px solid #eee;
+}
+.chat-input {
+  flex: 1;
+  height: 38px;
+  border: 1px solid #e5e5e5;
+  border-radius: 19px;
+  padding: 0 14px;
+  font-size: 14px;
+  outline: none;
+}
+.chat-input:focus { border-color: #E95F3C; }
+.chat-send {
+  flex: 0 0 auto;
+  height: 38px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 19px;
+  background: #E95F3C;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+}
+.chat-send:disabled { opacity: .5; cursor: not-allowed; }
+
+/* ---------- 结算页 ---------- */
+.checkout {
+  height: 100%;
+  overflow-y: auto;
+  background: #f6f6f6;
+  padding: 10px 10px 72px;
+}
+.co-card {
+  background: #fff;
+  border-radius: 8px;
+  padding: 12px;
+  margin-bottom: 10px;
+}
+.co-addr-name { font-size: 15px; font-weight: 600; color: #20232a; }
+.co-addr-phone { font-weight: 400; color: #818693; font-size: 13px; margin-left: 8px; }
+.co-addr-detail { font-size: 13px; color: #666; margin-top: 6px; line-height: 1.5; }
+.co-empty { font-size: 13px; color: #999; margin-bottom: 10px; }
+.co-form { display: flex; flex-direction: column; gap: 8px; }
+.co-form input,
+.co-remark {
+  width: 100%;
+  height: 40px;
+  border: 1px solid #eee;
+  border-radius: 6px;
+  padding: 0 10px;
+  font-size: 14px;
+  outline: none;
+  background: #fff;
+}
+.co-form input:focus,
+.co-remark:focus { border-color: #E95F3C; }
+.co-save {
+  height: 40px;
+  border: none;
+  border-radius: 6px;
+  background: #E95F3C;
+  color: #fff;
+  font-size: 14px;
+}
+.co-title { font-size: 13px; color: #818693; margin-bottom: 6px; }
+.co-item { display: flex; align-items: center; font-size: 14px; padding: 6px 0; }
+.co-item-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.co-item-num { color: #999; margin: 0 10px; font-size: 13px; }
+.co-item-amt { color: #20232a; }
+.co-total {
+  text-align: right;
+  font-size: 14px;
+  padding-top: 8px;
+  border-top: 1px dashed #eee;
+  margin-top: 6px;
+}
+.co-total b { color: #E95F3C; font-size: 18px; }
+.co-bar {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  height: 56px;
+  background: #fff;
+  border-top: 1px solid #eee;
+  display: flex;
+  align-items: center;
+  padding: 0 12px;
+  gap: 12px;
+}
+.co-bar-price { flex: 1; color: #E95F3C; font-size: 20px; font-weight: 600; }
+.co-bar-price span { font-size: 13px; }
+.co-submit {
+  height: 40px;
+  padding: 0 26px;
+  border: none;
+  border-radius: 20px;
+  background: #E95F3C;
+  color: #fff;
+  font-size: 15px;
+}
+.co-submit:disabled { opacity: .5; }
+
+/* ---------- 我的 ---------- */
+.my-box { height: 100%; overflow-y: auto; background: #f8f8f8; }
+.my-head {
+  background: #E95F3C;
+  color: #fff;
+  padding: 24px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.my-avatar { width: 56px; height: 56px; border-radius: 50%; background: #fff; object-fit: cover; }
+.my-name { font-size: 17px; font-weight: 500; }
+.my-list { background: #fff; margin-top: 10px; }
+.my-item {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 14px 16px; font-size: 15px;
+  border-bottom: 1px solid #f2f2f2;
+  cursor: pointer;
+}
+.my-item i { font-style: normal; color: #bdbdbd; }
+.my-orders { background: #fff; margin-top: 10px; padding: 12px 16px 16px; }
+.my-orders-title { font-size: 14px; color: #818693; margin-bottom: 8px; }
+.my-order-item { border-top: 1px solid #f2f2f2; padding: 10px 0; }
+.oi-top { display: flex; justify-content: space-between; font-size: 14px; }
+.oi-top b { color: #f58c21; }
+.oi-sub { font-size: 12px; color: #999; margin-top: 4px; }
+
+/* ---------- 轻提示 ---------- */
+.h5-toast {
+  position: fixed;
+  left: 50%; top: 50%;
+  transform: translate(-50%,-50%);
+  background: rgba(0,0,0,.75);
+  color: #fff;
+  font-size: 13px;
+  padding: 10px 16px;
+  border-radius: 8px;
+  z-index: 999;
+  max-width: 70%;
+  text-align: center;
+}
+
+/* ============================================================
+   地址管理 / 订单详情 / 成功页 / 购物车弹层 / 菜品详情
+   ============================================================ */
+#app { position: relative; }
+
+/* ---------- 地址管理 ---------- */
+.addr-list { height: 100%; overflow-y: auto; background: #f6f6f6; padding: 10px 10px 20px; }
+.addr-card { background: #fff; border-radius: 8px; padding: 12px; margin-bottom: 10px; }
+.addr-top { display: flex; align-items: center; gap: 8px; }
+.addr-name { font-size: 15px; font-weight: 600; color: #20232a; }
+.addr-phone { font-size: 13px; color: #818693; }
+.addr-tag { font-size: 11px; color: #E95F3C; border: 1px solid #E95F3C; border-radius: 3px; padding: 0 4px; }
+.addr-tag.gray { color: #999; border-color: #ddd; }
+.addr-detail { font-size: 13px; color: #666; margin-top: 6px; line-height: 1.5; }
+.addr-ops { display: flex; gap: 14px; margin-top: 10px; border-top: 1px solid #f5f5f5; padding-top: 8px; }
+.addr-op { background: none; border: none; font-size: 12px; color: #666; padding: 2px 0; }
+.addr-op.danger { color: #E95F3C; }
+.addr-empty { text-align: center; color: #999; font-size: 13px; padding: 30px 0; }
+.addr-add {
+  width: 100%; height: 44px; border: none; border-radius: 8px;
+  background: #E95F3C; color: #fff; font-size: 15px;
+}
+.addr-labels { display: flex; gap: 10px; }
+.addr-label {
+  padding: 6px 14px; border: 1px solid #eee; border-radius: 16px;
+  font-size: 13px; color: #666;
+}
+.addr-label.on { border-color: #E95F3C; color: #E95F3C; background: #fff6f2; }
+.co-del {
+  height: 40px; border: 1px solid #E95F3C; border-radius: 6px;
+  background: #fff; color: #E95F3C; font-size: 14px;
+}
+
+/* ---------- 订单详情 ---------- */
+.od-status { text-align: center; font-size: 18px; font-weight: 600; color: #E95F3C; padding: 14px 0; }
+.od-meta { font-size: 13px; color: #818693; margin-top: 6px; }
+.od-ops { display: flex; flex-wrap: wrap; gap: 10px; }
+.od-btn {
+  flex: 1 1 0; min-width: 100px; height: 38px;
+  border: 1px solid #ddd; border-radius: 19px;
+  background: #fff; color: #333; font-size: 14px;
+}
+.od-btn.primary { background: #E95F3C; border-color: #E95F3C; color: #fff; }
+.od-flavor { font-style: normal; font-size: 12px; color: #999; margin-left: 6px; }
+
+/* ---------- 下单成功 ---------- */
+.succ {
+  height: 100%; background: #fff;
+  display: flex; flex-direction: column; align-items: center;
+  padding-top: 60px; gap: 8px;
+}
+.succ-icon {
+  width: 76px; height: 76px; border-radius: 50%;
+  background: #E95F3C; color: #fff; font-size: 40px;
+  display: flex; align-items: center; justify-content: center;
+}
+.succ-title { font-size: 20px; font-weight: 600; margin-top: 10px; }
+.succ-sub { font-size: 13px; color: #818693; }
+.succ-order { font-size: 12px; color: #bbb; margin-top: 6px; }
+.succ-btns { display: flex; gap: 12px; margin-top: 24px; width: 80%; }
+
+/* ---------- 弹层通用 ---------- */
+.pop-mask {
+  position: absolute; inset: 0;
+  background: rgba(0,0,0,.45);
+  z-index: 200;
+  display: flex; flex-direction: column; justify-content: flex-end;
+}
+
+/* ---------- 购物车弹层 ---------- */
+.cart-pop {
+  background: #fff; border-radius: 12px 12px 0 0;
+  max-height: 70%; display: flex; flex-direction: column;
+}
+.cart-pop-head {
+  display: flex; justify-content: space-between; align-items: center;
+  padding: 12px 14px; font-size: 15px; font-weight: 600;
+  border-bottom: 1px solid #f2f2f2;
+}
+.cart-clear { font-size: 12px; color: #999; font-weight: 400; }
+.cart-pop-list { flex: 1 1 auto; overflow-y: auto; padding: 4px 14px; }
+.cart-row { display: flex; align-items: center; padding: 10px 0; border-bottom: 1px solid #f7f7f7; }
+.cart-row-name {
+  flex: 1; min-width: 0; font-size: 14px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.cart-row-right { display: flex; align-items: center; gap: 8px; }
+.cart-row-amt { font-size: 14px; color: #E95F3C; }
+.cart-btn { width: 22px; height: 22px; }
+.cart-num { min-width: 14px; text-align: center; font-size: 14px; }
+.cart-pop-foot {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 10px 14px; border-top: 1px solid #f2f2f2;
+}
+.cart-total { font-size: 14px; }
+.cart-total b { color: #E95F3C; font-size: 18px; }
+
+/* ---------- 菜品详情弹层 ---------- */
+.dish-pop {
+  background: #fff; border-radius: 12px 12px 0 0;
+  max-height: 80%; display: flex; flex-direction: column;
+}
+.dish-pop-imgbox { flex: 0 0 auto; height: 180px; background: linear-gradient(135deg,#fde7dc,#f7c9b6); }
+.dish-pop-img { width: 100%; height: 180px; object-fit: cover; display: block; }
+.dish-pop-body { flex: 1 1 auto; overflow-y: auto; padding: 12px 14px; }
+.dish-pop-name { font-size: 17px; font-weight: 600; }
+.dish-pop-desc { font-size: 13px; color: #818693; margin-top: 6px; line-height: 1.5; }
+.dish-pop-price { color: #E95F3C; font-size: 18px; font-weight: 600; margin-top: 8px; }
+.flavor-group { margin-top: 12px; }
+.flavor-name { font-size: 13px; color: #333; margin-bottom: 6px; }
+.flavor-vals { display: flex; flex-wrap: wrap; gap: 8px; }
+.flavor-val { padding: 5px 12px; border-radius: 14px; background: #f5f5f5; font-size: 13px; color: #666; }
+.flavor-val.on { background: #fff2ec; color: #E95F3C; border: 1px solid #E95F3C; }
+.dish-pop-foot { flex: 0 0 auto; padding: 10px 14px; border-top: 1px solid #f2f2f2; }
+.dish-pop-foot .co-submit { width: 100%; height: 44px; border-radius: 22px; }
+
+/* ============================================================
+   视觉打磨（2026-10-18）
+   —— 小程序原样式是给"有门店招牌图"设计的，纯 H5 用起来脏；
+      这里按外卖 App 的常规做法重排：白卡 + 细分割线 + 明确层级。
+   ============================================================ */
+
+/* ---------- 导航栏 ---------- */
+.h5-navbar {
+  height: 48px;
+  flex: 0 0 48px;
+  background: linear-gradient(180deg, #ef6a45, #e65b38);
+  box-shadow: 0 1px 6px rgba(233, 95, 60, .25);
+  font-size: 17px;
+  letter-spacing: .5px;
+}
+.h5-nav-back {
+  position: absolute;
+  left: 6px; top: 50%;
+  transform: translateY(-50%);
+  width: 34px; height: 34px;
+  line-height: 30px;
+  text-align: center;
+  font-size: 26px;
+  color: #fff;
+  opacity: .95;
+}
+
+/* ---------- 店铺信息卡 ---------- */
+.home_content { background: #f7f8fa; }
+.home_content .restaurant_info_box {
+  background: linear-gradient(180deg, #fff2ec 0%, #f7f8fa 100%);
+  padding-bottom: 10px;
+}
+.home_content .restaurant_info_box .restaurant_info {
+  margin: 10px 12px 0;
+  padding: 12px;
+  border-radius: 12px;
+  background: #fff;
+  box-shadow: 0 2px 10px rgba(20, 20, 20, .06);
+}
+.home_content .restaurant_info_box .restaurant_info .info_top {
+  padding-bottom: 10px;
+  border-bottom: 1px solid #f3f4f6;
+}
+.home_content .restaurant_info_box .restaurant_info .info_top .info_top_left {
+  margin-right: 10px;
+  padding-top: 2px;
+}
+.home_content .restaurant_info_box .restaurant_info .info_top .info_top_left img {
+  width: 52px !important;
+  height: 52px !important;
+  border-radius: 10px;
+  display: block;
+}
+.home_content .restaurant_info_box .restaurant_info .info_top .info_top_right .right_title > span {
+  font-size: 17px;
+  font-weight: 600;
+  color: #20232a;
+}
+.businessStatus {
+  width: auto !important;
+  height: auto !important;
+  padding: 1px 6px;
+  margin-left: 6px;
+  border-radius: 4px;
+  font-size: 11px;
+  line-height: 16px;
+  background: #eaf8f0 !important;
+  color: #16a34a !important;
+  vertical-align: middle;
+}
+.businessStatus.close { background: #f3f4f6 !important; color: #9ca3af !important; }
+.home_content .restaurant_info_box .restaurant_info .info_top .info_top_right .right_details {
+  margin-top: 6px;
+}
+.home_content .restaurant_info_box .restaurant_info .info_top .info_top_right .right_details .details_flex .icon_text {
+  font-size: 11px !important;
+  color: #9aa0a8 !important;
+  padding-right: 12px !important;
+}
+.home_content .restaurant_info_box .restaurant_info .info_bottom { margin-top: 10px !important; }
+.home_content .restaurant_info_box .restaurant_info .info_bottom .word {
+  font-size: 12px;
+  color: #9aa0a8 !important;
+  padding-bottom: 6px !important;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+.home_content .restaurant_info_box .restaurant_info .info_bottom .address {
+  font-size: 12px;
+  color: #b0b5bd !important;
+}
+
+/* ---------- 分类列 ---------- */
+.home_content .restaurant_menu_list {
+  background: #fff;
+  border-radius: 12px 12px 0 0;
+}
+.home_content .restaurant_menu_list .type_list {
+  width: 86px !important;
+  background: #f5f6f8 !important;
+  padding-bottom: 8px;
+}
+.home_content .restaurant_menu_list .type_list .type_item {
+  line-height: 1 !important;
+  padding: 15px 10px !important;
+  font-size: 13px;
+  color: #6b7280;
+  position: relative;
+}
+.home_content .restaurant_menu_list .type_list .type_item .item {
+  line-height: 18px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.home_content .restaurant_menu_list .type_list .active {
+  background: #fff !important;
+  color: #20232a !important;
+  font-weight: 600;
+}
+.home_content .restaurant_menu_list .type_list .active::before {
+  content: '';
+  position: absolute;
+  left: 0; top: 50%;
+  transform: translateY(-50%);
+  width: 3px; height: 18px;
+  background: #E95F3C;
+  border-radius: 0 3px 3px 0;
+}
+.home_content .restaurant_menu_list .type_list .active::after { display: none !important; }
+
+/* ---------- 菜品行 ---------- */
+.home_content .restaurant_menu_list .vegetable_order_list {
+  padding: 4px 12px 80px !important;
+  background: #fff;
+}
+.home_content .restaurant_menu_list .vegetable_order_list .type_item {
+  display: flex;
+  padding: 14px 0 !important;
+  border-bottom: 1px solid #f5f6f8;
+  position: relative;
+}
+.home_content .restaurant_menu_list .vegetable_order_list .type_item .dish_img {
+  width: 78px !important;
+  height: 78px;
+  margin: 0 12px 0 0 !important;
+  border-radius: 10px;
+  overflow: hidden;
+  flex: 0 0 auto;
+}
+.home_content .restaurant_menu_list .vegetable_order_list .type_item .dish_img .dish_img_url {
+  width: 78px !important;
+  height: 78px !important;
+  border-radius: 10px;
+  object-fit: cover;
+}
+.home_content .restaurant_menu_list .vegetable_order_list .type_item .dish_info {
+  padding-bottom: 2px;
+  min-width: 0;
+}
+.home_content .restaurant_menu_list .vegetable_order_list .type_item .dish_info .dish_name {
+  font-size: 15px !important;
+  margin-bottom: 4px;
+}
+.home_content .restaurant_menu_list .vegetable_order_list .type_item .dish_info .dish_label {
+  font-size: 12px !important;
+  color: #9aa0a8 !important;
+  line-height: 16px;
+  max-width: 168px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.home_content .restaurant_menu_list .vegetable_order_list .type_item .dish_info .dish_label.sub {
+  font-size: 11px !important;
+  color: #c3c7cd !important;
+  margin-top: 2px;
+}
+.home_content .restaurant_menu_list .vegetable_order_list .type_item .dish_info .dish_price {
+  position: absolute;
+  left: 0; bottom: 0;
+  height: 24px !important;
+  line-height: 24px !important;
+  font-size: 17px !important;
+}
+.home_content .restaurant_menu_list .vegetable_order_list .type_item .dish_info .dish_price .ico {
+  font-size: 11px !important;
+}
+.home_content .restaurant_menu_list .vegetable_order_list .type_item .dish_info .dish_active {
+  right: 0 !important;
+  bottom: 0 !important;
+  align-items: center;
+}
+.home_content .restaurant_menu_list .vegetable_order_list .type_item .dish_info .dish_active .dish_add,
+.home_content .restaurant_menu_list .vegetable_order_list .type_item .dish_info .dish_active .dish_red {
+  width: 26px !important;
+  height: 26px !important;
+}
+.home_content .restaurant_menu_list .vegetable_order_list .type_item .dish_info .dish_active .dish_number {
+  font-size: 14px;
+  min-width: 16px;
+  text-align: center;
+}
+
+/* 图片兜底：分类 emoji + 对应色调 */
+.dish_img.img-fallback { position: relative; background: #f7f8fa; }
+.dish_img.img-fallback::after {
+  content: attr(data-initial);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 30px;
+  line-height: 1;
+  border-radius: 10px;
+}
+.dish_img.img-fallback.tone-warm::after   { background: linear-gradient(135deg, #fff1e8, #ffdcc8); }
+.dish_img.img-fallback.tone-green::after  { background: linear-gradient(135deg, #eefaf0, #cdeed6); }
+.dish_img.img-fallback.tone-amber::after  { background: linear-gradient(135deg, #fff8e6, #ffe8b8); }
+.dish_img.img-fallback.tone-blue::after   { background: linear-gradient(135deg, #eef4ff, #d6e4ff); }
+.dish_img.img-fallback.tone-orange::after { background: linear-gradient(135deg, #fff3e6, #ffdcb8); }
+
+/* ---------- 底部结算栏 ---------- */
+.home_content .footer_order_buttom {
+  left: 12px !important;
+  right: 12px !important;
+  bottom: 10px !important;
+  height: 50px !important;
+  border-radius: 25px !important;
+  background: rgba(28, 28, 30, .92) !important;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .18);
+  padding: 0 6px 0 0 !important;
+}
+.home_content .footer_order_buttom .order_number {
+  width: 58px !important;
+  height: 50px;
+}
+.home_content .footer_order_buttom .order_number .order_number_icon {
+  width: 58px !important;
+  height: 58px !important;
+  left: 0 !important;
+  bottom: -6px !important;
+}
+.order_dish_num {
+  position: absolute;
+  right: 0; top: 2px;
+  z-index: 3;
+  min-width: 17px; height: 17px;
+  line-height: 17px;
+  padding: 0 5px;
+  background: #ff3b30;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  border-radius: 9px;
+  text-align: center;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, .25);
+}
+.home_content .footer_order_buttom .order_price {
+  padding-left: 46px !important;
+  font-size: 19px !important;
+  line-height: 50px !important;
+  font-weight: 600;
+}
+.home_content .footer_order_buttom .order_but {
+  width: 92px !important;
+  height: 36px !important;
+  line-height: 36px !important;
+  border-radius: 18px !important;
+  margin: 7px 0 0 6px !important;
+  font-size: 15px !important;
+  background: #f2f3f5 !important;
+  color: #9aa0a8 !important;
+}
+.home_content .order_form .order_but {
+  background: #ffc200 !important;
+  color: #4a3400 !important;
+  font-weight: 600;
+}
+
+/* ---------- 骨架屏 / 空态 ---------- */
+.dish-skeleton { padding: 14px 0; }
+.sk-row { display: flex; gap: 12px; margin-bottom: 18px; animation: sk 1.4s ease-in-out infinite; }
+.sk-img { width: 78px; height: 78px; flex: 0 0 auto; border-radius: 10px; background: #f2f3f5; }
+.sk-lines { flex: 1; padding-top: 6px; }
+.sk-lines div { background: #f2f3f5; border-radius: 6px; }
+.sk-l1 { height: 14px; width: 55%; margin-bottom: 10px; }
+.sk-l2 { height: 11px; width: 82%; margin-bottom: 10px; }
+.sk-l3 { height: 14px; width: 30%; }
+@keyframes sk { 0%, 100% { opacity: .55 } 50% { opacity: 1 } }
+.no_dish { padding: 56px 0; text-align: center; color: #b0b5bd; font-size: 13px; }
+.no_dish_icon { font-size: 34px; margin-bottom: 10px; opacity: .55; }
+
+/* ---------- 我的：头像改成文字徽标（原来的性别图标太随意） ---------- */
+.my-head {
+  background: linear-gradient(160deg, #ef6a45, #e65b38);
+  padding: 22px 16px;
+  align-items: center;
+}
+.my-avatar {
+  width: 56px;
+  height: 56px;
+  flex: 0 0 56px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, .95);
+  color: #E95F3C;
+  font-size: 22px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, .08);
+}
+.my-info { min-width: 0; }
+.my-name { font-size: 17px; font-weight: 600; color: #fff; }
+.my-sub {
+  font-size: 12px;
+  color: rgba(255, 255, 255, .8);
+  margin-top: 3px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.my-item i { font-size: 16px; }
+.chat-input { font-size: 13px; }
+
+/* ---------- 我的：功能入口重做（图标 + 副标题） ---------- */
+.my-box { background: #f5f6f8; }
+.my-list {
+  background: #fff;
+  margin: 12px 12px 0;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(20, 20, 20, .04);
+}
+.my-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px !important;
+  border-bottom: 1px solid #f5f6f8 !important;
+  font-size: 15px;
+}
+.my-item:last-child { border-bottom: none !important; }
+.my-icon {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+}
+.ico-addr { background: #fff2ec; }
+.ico-order { background: #edf4ff; }
+.my-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+.my-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #20232a;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.my-desc {
+  font-size: 12px;
+  color: #9aa0a8;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.my-arrow { color: #c8ccd2; font-size: 18px; line-height: 1; }
+
+/* ---------- 我的：最近订单也做成卡片 ---------- */
+.my-orders {
+  background: #fff;
+  margin: 12px 12px 0 !important;
+  border-radius: 12px;
+  padding: 12px 14px 6px !important;
+  box-shadow: 0 1px 4px rgba(20, 20, 20, .04);
+}
+.my-orders-title { font-size: 13px; color: #818693; margin-bottom: 4px; }
+.my-order-item {
+  border-top: none;
+  padding: 12px 0 !important;
+  cursor: pointer;
+}
+.my-order-item + .my-order-item { border-top: 1px solid #f5f6f8; }
+.oi-top { font-size: 14px; color: #20232a; }
+.oi-top b { color: #E95F3C !important; font-weight: 600; }
+.oi-sub {
+  font-size: 12px;
+  color: #9aa0a8 !important;
+  margin-top: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.oi-sub i { color: #c8ccd2; font-style: normal; }
+
+/* 最近订单行：主内容 + 右侧箭头垂直居中 */
+.my-order-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.mo-main { flex: 1 1 auto; min-width: 0; }
+.oi-sub { display: block; }
+
+/* ---------- 底部 tab：换成一整套线性图标（原来 AI 是喇叭、我的是性别符号） ---------- */
+.h5-tab { color: #9298a3; padding-top: 2px; }
+.h5-tab svg { width: 22px; height: 22px; display: block; }
+.h5-tab span { font-size: 11px; line-height: 14px; }
+.h5-tab.on { color: #E95F3C; }
+.h5-tab.on svg { transform: translateY(-1px); }
+
+/* ---------- 结算栏微调：价格别被挤到中间 ---------- */
+.home_content .footer_order_buttom .order_price {
+  padding-left: 4px !important;
+  text-align: left;
+}
+/* 角标加白边，避免压在购物袋图案上 */
+.order_dish_num {
+  right: -4px;
+  top: -2px;
+  border: 2px solid #1c1c1e;
+  line-height: 13px;
+}
+/* 菜品描述可以再宽一点（它单独占一行，不吃按钮的位置） */
+.home_content .restaurant_menu_list .vegetable_order_list .type_item .dish_info .dish_label {
+  max-width: 200px;
+}
+
+/* ---------- AI 页：底部购物车栏（AI 加购后用户要能看见） ---------- */
+.ai-cart {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #fff;
+  border-top: 1px solid #f2f2f2;
+}
+.ai-cart-main {
+  position: relative;
+  flex: 1 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #E95F3C;
+  min-width: 0;
+  cursor: pointer;
+}
+.ai-cart-main svg { width: 22px; height: 22px; flex: 0 0 auto; }
+.ai-cart-count {
+  min-width: 17px;
+  height: 17px;
+  line-height: 17px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: #ff3b30;
+  color: #fff;
+  font-size: 11px;
+  font-weight: 500;
+  text-align: center;
+}
+.ai-cart-total {
+  font-size: 16px;
+  font-weight: 600;
+  color: #20232a;
+}
+.ai-cart-btn {
+  flex: 0 0 auto;
+  height: 34px;
+  padding: 0 18px;
+  border: none;
+  border-radius: 17px;
+  background: #ffc200;
+  color: #4a3400;
+  font-size: 14px;
+  font-weight: 600;
+}
+.ai-cart-btn:disabled {
+  background: #f2f3f5;
+  color: #b9bec6;
+  font-weight: 400;
+}
+
+/* ---------- AI 页购物车栏：图标换回首页那个"骑车小哥" ---------- */
+.ai-cart-main { color: inherit; }
+.ai-cart-iconbox {
+  position: relative;
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+}
+.ai-cart-iconbox img {
+  width: 38px;
+  height: 38px;
+  object-fit: contain;
+  display: block;
+}
+.ai-cart-count {
+  position: absolute;
+  right: -6px;
+  top: -2px;
+  border: 2px solid #fff;
+  line-height: 13px;
+}
+
+/* ---------- 信息卡三个小图标：换成 SVG（原来是 PNG，距离那个还是时钟） ---------- */
+.home_content .restaurant_info_box .restaurant_info .info_top .info_top_right
+  .right_details .details_flex .top_icon {
+  width: 13px;
+  height: 13px;
+  background: none !important;
+  color: #9aa0a8;
+  display: inline-block;
+  vertical-align: -2px;
+  margin: 0 4px 0 0;
+}
+.home_content .restaurant_info_box .restaurant_info .info_top .info_top_right
+  .right_details .details_flex {
+  display: flex;
+  align-items: center;
+}
+
+/* ---------- 食刻自己的 logo（替换原教程的 logo_ruiji.png） ---------- */
+.home_content .restaurant_info_box .restaurant_info .info_top .info_top_left .brand-logo {
+  width: 52px;
+  height: 52px;
+  display: block;
+  border-radius: 13px;
+  box-shadow: 0 2px 6px rgba(239, 91, 43, .28);
+}

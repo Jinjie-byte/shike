@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56" width="56" height="56">
+  <defs>
+    <linearGradient id="sk" x1="0" y1="0" x2="0.35" y2="1">
+      <stop offset="0" stop-color="#FFA63E"/>
+      <stop offset="1" stop-color="#EF5B2B"/>
+    </linearGradient>
+    <clipPath id="skClip"><rect width="56" height="56" rx="15"/></clipPath>
+  </defs>
+  <rect width="56" height="56" rx="15" fill="url(#sk)"/>
+  <g clip-path="url(#skClip)">
+    <ellipse cx="16" cy="8" rx="30" ry="17" fill="#ffffff" opacity="0.16"/>
+  </g>
+  <text x="28" y="28" text-anchor="middle" dominant-baseline="central"
+        font-size="31" font-weight="700" fill="#ffffff"
+        font-family="'PingFang SC','Microsoft YaHei','Hiragino Sans GB',sans-serif">食</text>
+</svg>
