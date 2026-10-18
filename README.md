@@ -1,130 +1,169 @@
-# 食刻外卖
+# 食刻外卖（Shike）
 
-## 一.项目介绍
+基于 Spring Boot 的外卖点餐系统。包含管理端（Web）、用户端（H5）、小程序端三个入口，
+并集成一个基于 Tool Calling 的 AI 点单助手：用户用自然语言说需求，AI 查询真实菜单后推荐菜品，
+经用户确认后可代加购物车；下单与结算仍由用户完成。
 
-本项目（食刻外卖）是专门为餐饮企业（餐厅、饭店）定制的一款软件产品，包括 系统管理后台 和 小程序端应用 两部分。其中系统管理后台主要提供给餐饮企业内部员工使用，可以对餐厅的分类、菜品、套餐、订单、员工等进行管理维护，对餐厅的各类数据进行统计，同时也可进行来单语音播报功能。小程序端主要提供给消费者使用，可以在线浏览菜品、添加购物车、下单、支付、催单等。
+> 项目基于公开教学项目《苍穹外卖》的代码结构改造：完成全量改名与结构重组，修复多处原版缺陷，
+> 补齐安全加固，并扩展了 AI 能力。改造点见下文「改造与工程实践」。
 
-## 二.功能架构图
+## 功能
 
+**管理端**：工作台数据统计、菜品 / 套餐 / 分类 / 员工管理、订单处理，WebSocket 来单与催单提醒。
 
+**用户端 H5**：店铺浏览、分类点餐、口味规格选择、购物车、收货地址管理、下单与模拟支付、历史订单、AI 点单。
 
-![aritecture.png](assert/aritecture.png)
+**小程序端**：微信小程序（uni-app 编译产物）。受微信 HTTPS 与域名备案限制，仅支持开发者工具内演示。
 
-### (1).管理端功能
+**AI 点单**：多轮对话；理解「想吃辣的，30 块以内」这类模糊需求；回答基于真实菜单，不编造菜品；
+可代加购物车（先征求用户确认）；支持查询套餐及其组成。
 
-员工登录/退出 , 员工信息管理 , 分类管理 , 菜品管理 , 套餐管理 , 菜品口味管理 , 订单管理 ，数据统计，来单提醒。
+## 技术栈
 
-### (2).用户端功能
+| 层 | 技术 |
+|---|---|
+| 后端 | Java 17、Spring Boot 2.7、MyBatis、MySQL 8、Redis、JWT、WebSocket |
+| 管理端 | Vue + Element UI（vue-typescript-admin-template） |
+| 用户端 | Vue3 全局构建版（无打包步骤，静态托管即可） |
+| AI 服务 | Python、FastAPI、LangGraph、DeepSeek API |
+| 部署 | nginx（静态托管 + 反向代理） |
 
-微信登录 , 收件人地址管理 , 用户历史订单查询 , 菜品规格查询 , 购物车功能 , 下单 , 支付、分类及菜品浏览。
+## 改造与工程实践
 
-## 三.技术选型
+**下单幂等**。下单是 INSERT，天生不幂等。用 Redis `SETNX` 做分布式锁，锁加在 Controller（事务外层）：
+事务提交由代理在方法返回之后完成，若锁加在 Service 内部，会出现「锁已释放、事务未提交」的窗口，
+第二个请求会读到未清空的购物车，再生成一张订单。已通过并发两请求实测，仅生成一张订单。
 
-![technology.png](assert/technology.png)
+**金额服务端重算**。订单金额与明细小计由服务端按购物车（单价 × 数量）计算，请求体里的金额字段一律忽略；
+打包费同样不取前端值，避免「传 0.01 元买 188 元菜品」这类篡改。
 
-### (1). 用户层
+**接口越权（IDOR）校验**。订单详情 / 取消 / 催单 / 再来一单、地址读写删、下单时的收货地址，
+全部校验资源归属当前登录用户。
 
-本项目中在构建系统管理后台的前端页面，我们会用到H5、Vue.js、ElementUI、apache echarts(展示图表)等技术。而在构建移动端应用时，我们会使用到微信小程序。
+**AI 工具设计**。菜单数据量小（约 25 条），且菜品名不含口味词（「剁椒鱼头」里没有「辣」字），
+关键词检索（LIKE）对模糊需求的命中率为 0。因此只提供 `get_menu` 一个读工具：一次返回全部在售菜品与套餐，
+由模型根据名称、描述、分类自行筛选。`add_to_cart` 是写操作，由系统提示词约束「先征求用户确认，绝不擅自执行」。
 
-### (2). 网关层
+**AI 链路**。浏览器 → Java（JWT 鉴权）→ Python Agent → 需要数据时回调 Java 内部接口 → MySQL。
+Python 不直连数据库：数据出口唯一、数据库密码不外流、SQL 只维护一份。
+内部接口用共享密钥校验（`X-Internal-Token`），生产环境 Java 只监听回环地址。
 
-Nginx是一个服务器，主要用来作为Http服务器，部署静态资源，访问性能高。在Nginx中还有两个比较重要的作用： 反向代理和负载均衡， 在进行项目部署时，要实现Tomcat的负载均衡，就可以通过Nginx来实现。
+**WebSocket 来单提醒**。会话表使用并发容器；推送失败立即移除失效会话；同一会话的写入加锁，
+避免多线程并发写导致的静默丢消息。
 
-### (3). 应用层
+**密钥管理**。真实密钥只放在不入库的 `application-local.yml`；仓库历史中曾提交过的密钥已用
+git-filter-repo 全量清洗。
 
-SpringBoot： 快速构建Spring项目, 采用 "约定优于配置" 的思想, 简化Spring项目的配置开发。 SpringMVC：SpringMVC是spring框架的一个模块，springmvc和spring无需通过中间整合层进行整合，可以无缝集成。 Spring Task: 由Spring提供的定时任务框架。 httpclient: 主要实现了对http请求的发送。 Spring Cache: 由Spring提供的数据缓存框架 JWT: 用于对应用程序上的用户进行身份验证的标记。 阿里云OSS: 对象存储服务，在项目中主要存储文件，如图片等。 Swagger： 可以自动的帮助开发人员生成接口文档，并对接口进行测试。 POI: 封装了对Excel表格的常用操作。 WebSocket: 一种通信网络协议，使客户端和服务器之间的数据交换更加简单，用于项目的来单、催单功能实现。
+## 快速开始
 
-### (4). 数据层
+| 依赖 | 版本 |
+|---|---|
+| JDK | 17 |
+| MySQL | 8.x |
+| Redis | 近期版本即可 |
+| Node.js | ≥ 16（管理端构建） |
+| Python | ≥ 3.10（AI 服务） |
 
-MySQL： 关系型数据库, 本项目的核心业务数据都会采用MySQL进行存储。 Redis： 基于key-value格式存储的内存数据库, 访问速度快, 经常使用它做缓存。 Mybatis： 本项目持久层将会使用Mybatis开发。 pagehelper: 分页插件。 spring data redis: 简化java代码操作Redis的API。
+### 1. 数据库
 
-### (5). 工具
+```bash
+mysql -u root -p < sql/shike_init.sql
+```
 
-git: 版本控制工具, 在团队协作中, 使用该工具对项目中的代码进行管理。 maven: 项目构建工具。 junit：单元测试工具，开发人员功能实现完毕后，需要通过junit对功能进行单元测试。 postman: 接口测工具，模拟用户发起的各类HTTP请求，获取对应的响应结果。
+脚本会创建 `shike` 库并写入基础数据（菜品、分类、套餐、员工、店铺）。
 
+### 2. 后端（端口 8080）
 
-## 四.技术栈
+新建 `shike-server/src/main/resources/application-local.yml`（此文件不入库，模板如下）：
 
-- 后端框架
-    - SpringBoot
-    - SpringMVC
-    - Spring Task
-    - httpclient
-    - Spring Cache
-    - mybatis
-    - Swagger
-    - Websocket
-    - aliyun oss
-    - JWT
-    - POI
-    - wechatpay(模拟)
-- 数据库
-    - MySql
-    - Redis
-- 前端框架
-    - Vue
-    - ElementUI
-    - Vue-Router
-    - Axios
-    - ECharts
-    - 微信小程序
+```yaml
+shike:
+  datasource:
+    password: 你的MySQL密码
+  alioss:
+    endpoint: oss-cn-beijing.aliyuncs.com
+    access-key-id: 你的AccessKeyId
+    access-key-secret: 你的AccessKeySecret
+    bucket-name: 你的bucket名
+```
 
-## 五.配置文件修改
+IDEA 运行 `ShikeApplication`，或：
 
- ```yml
-    sky:
-       datasource:
-         driver-class-name: com.mysql.cj.jdbc.Driver
-         host: localhost
-         port: 3306
-         database: shike
-         username: 本机账号
-         password: 本机密码
-    aliyun:   #阿里云配置,用于文件上传
-        access-key-id: xxxxxxxxxxxxxxxxxxxx  #阿里云accessKey
-        access-key-secret: your-access-key-secret  #阿里云secretKey
-        endpoint: oss-cn-beijing.aliyuncs.com  #阿里云endpoint
-        bucket-name: xxxxxxxx  #阿里云bucketName
-    redis:
-        host: 192.168.100.128  #redis地址
-        port: 6379  #redis端口
-        password: xxxxxx  #redis密码
-        database: 0
-    wx:   #微信配置
-       app-id: wxffb3637a228223b8 #微信公众号appid
-       app-secret: 84311df9199ecacdf4f12d27b6b9522d  #微信公众号appsecret
-       mchid: 1561414331  #微信商户号mchid
-       mchSerialNo: 4B3B3DC35414AD50B1B755BAF8DE9CC7CF407606  #微信商户号密钥
-       privateKeyFilePath:  D:\pay\apiclient_key.pem      #微信商户号私钥文件路径
-       apiV3Key: CZBK51236435wxpay435434323FFDuv3         #微信商户号v3密钥
-       weChatPayCertFilePath: D:\pay\wechatpay_166D96F876F45C7D07CE98952A96EC980368ACFC.pem   #微信商户号证书文件路径
-       notifyUrl: http://xxxxxxxxx/notify/paySuccess  #微信支付成功回调地址(xxxx部分需要替换成使用本项目启动的cpolar软件中的域名)
-       refundNotifyUrl: https://xxxxxxxxx/notify/refundSuccess  #微信退款成功回调地址(xxxx部分需要替换成使用本项目启动的cpolar软件中的域名)
-    shop:
-      address: 北京市朝阳区北苑东路11号院
-    baidu:
-      ak: xxxxxxxxxxxxxxxxxxx #百度地图ak(需要自己去百度地图开发平台申请应用获取ak)
-   ```
-## 六.项目演示
+```bash
+cd shike-server
+mvn -pl shike-server -am package -DskipTests
+java -jar shike-server/target/shike-server-1.0-SNAPSHOT.jar --spring.profiles.active=dev,local
+```
 
-- 管理员端
+接口文档：<http://localhost:8080/doc.html>
 
-工作台：
-![工作台.png](assert/%E5%B7%A5%E4%BD%9C%E5%8F%B0.png)
-数据统计：
-![数据统计.png](assert/%E6%95%B0%E6%8D%AE%E7%BB%9F%E8%AE%A1.png)
-订单管理：
-![订单管理.png](assert/%E8%AE%A2%E5%8D%95%E7%AE%A1%E7%90%86.png)
-套餐管理：
-![套餐管理.png](assert/%E5%A5%97%E9%A4%90%E7%AE%A1%E7%90%86.png)
-菜品管理：
-![菜品管理.png](assert/%E8%8F%9C%E5%93%81%E7%AE%A1%E7%90%86.png)
-分类管理：
-![分类管理.png](assert/%E5%88%86%E7%B1%BB%E7%AE%A1%E7%90%86.png)
-员工管理：
-![员工管理.png](assert/%E5%91%98%E5%B7%A5%E7%AE%A1%E7%90%86.png)
-- 用户端
+### 3. AI 服务（端口 8000）
 
-![小程序首页.png](assert/%E5%B0%8F%E7%A8%8B%E5%BA%8F%E9%A6%96%E9%A1%B5.png)
+```bash
+cd shike-ai-agent
+python -m venv .venv
+.venv/Scripts/pip install -r requirements.txt      # Windows；Linux/macOS 用 .venv/bin/pip
+.venv/Scripts/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
+```
 
-![用户界面.png](assert/%E7%94%A8%E6%88%B7%E7%95%8C%E9%9D%A2.png)
+需要先设置环境变量 `DEEPSEEK_API_KEY`（从 <https://platform.deepseek.com> 获取）。
+可选环境变量：`JAVA_BASE`（Java 地址，默认 `http://127.0.0.1:8080`）、`INTERNAL_TOKEN`（内部接口共享密钥）。
+
+### 4. 管理端
+
+```bash
+cd admin-web
+npm install --legacy-peer-deps
+npm run dev      # 开发模式：http://localhost:8888，/api 代理到 8080
+npm run build    # 生产构建，产物在 dist/
+```
+
+Node 17+ 与本项目使用的 webpack 4 不兼容，`scripts/vue-cli.js` 已自动注入
+`--openssl-legacy-provider`，无需手动设置。
+
+默认账号：`admin / 123456`。
+
+### 5. 用户端 H5
+
+纯静态文件，任意 Web 服务器托管 `shike-user-h5/` 即可。nginx 参考配置：
+
+```nginx
+location /app/  { root html; }
+location /user/ { proxy_pass http://127.0.0.1:8080; }
+location /ws/   {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+}
+```
+
+### 关于用户端登录
+
+用户端登录走微信 `code` 换 `openid`。本地演示依赖 `shike.wechat.enable-mock: true`
+（dev 配置已开启，返回固定测试账号）。上线前必须改为 `false` 并填入真实 appid / secret。
+
+## 目录结构
+
+```
+├── sql/                 数据库初始化脚本
+├── shike-pojo/          实体 / DTO / VO
+├── shike-common/        常量、工具、全局配置属性
+├── shike-server/        Web 入口（Controller / Service / Mapper / 拦截器 / 定时任务）
+├── admin-web/           管理端源码（Vue + TypeScript）
+├── shike-user-h5/       用户端 H5（纯静态，可直接托管）
+├── shike-ai-agent/      Python AI 服务（FastAPI + LangGraph）
+└── mp-weixin/           小程序端（开发者工具演示）
+```
+
+## 演示
+
+截图与演示视频待补。
+
+- 管理端：工作台 / 菜品管理 / 订单处理 / 来单提醒
+- 用户端 H5：点餐 → AI 推荐 → 确认加购 → 结算下单 → 支付
+- AI 点单：多轮对话、基于真实菜单推荐、确认后代加购物车
+
+## License
+
+仅供学习交流使用。
