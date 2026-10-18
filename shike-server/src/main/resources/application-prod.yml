@@ -1,0 +1,117 @@
+# ============================================================
+# 生产环境配置 —— 服务器上用这个
+# ------------------------------------------------------------
+# 启动方式：
+#   java -Xms256m -Xmx512m -jar shike-server.jar --spring.profiles.active=prod
+#
+# 注意：application.yml 里写的是 active: dev,local，
+#       命令行传 --spring.profiles.active=prod 会把它整个覆盖掉，
+#       所以【本文件必须自带全部键】，不能指望 dev 里的值兜底。
+#
+# ★ 所有 <填xxx> 都是必须改的。这个文件可以进版本库（里面没有真值），
+#   真值在服务器上直接改这个文件，或者用环境变量覆盖。
+# ============================================================
+
+server:
+  # ★ 只监听回环地址 —— 外网连 8080 都连不上。
+  #   这是 AI 内部接口三层防护的第 ① 层（另两层：共享密钥、安全组）。
+  #   nginx 在同一台机器上，走 127.0.0.1 完全够用。
+  address: 127.0.0.1
+  port: 8080
+
+spring:
+  datasource:
+    druid:
+      driver-class-name: com.mysql.cj.jdbc.Driver
+      url: jdbc:mysql://127.0.0.1:3306/shike?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&zeroDateTimeBehavior=convertToNull&useSSL=false&allowPublicKeyRetrieval=true
+      username: root
+      password: <填MySQL密码>
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    # ★ 1Panel 装的 Redis 默认带密码；本地开发是无密码的，别照抄 dev
+    password: <填Redis密码>
+    database: 0
+
+mybatis:
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.shike.entity
+  configuration:
+    map-underscore-to-camel-case: true
+
+logging:
+  level:
+    com:
+      shike:
+        # ★ 上线关掉 SQL 打屏：一是刷日志，二是 SQL 里可能带敏感参数
+        mapper: info
+        service: info
+        controller: info
+  file:
+    name: /opt/shike/logs/shike.log
+
+shike:
+  jwt:
+    # ★★ 必须换掉！默认的 itcast / itheima 是教程里公开的值，
+    #     别人拿去就能伪造管理员 token 直接进后台。
+    #     生成一个：openssl rand -base64 32
+    admin-secret-key: <填一个32位以上随机串>
+    admin-ttl: 7200000
+    admin-token-name: token
+    user-secret-key: <填另一个32位以上随机串>
+    user-ttl: 7200000
+    user-token-name: authentication
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    host: 127.0.0.1
+    port: 3306
+    database: shike
+    username: root
+    password: <填MySQL密码>
+
+  redis:
+    host: 127.0.0.1
+    port: 6379
+    password: <填Redis密码>
+    database: 0
+
+  alioss:
+    endpoint: <填OSS endpoint>
+    access-key-id: <填AccessKeyId>
+    access-key-secret: <填AccessKeySecret>
+    bucket-name: <填bucket名>
+    max-size: 10485760
+
+  wechat:
+    # ★★ 上线必须改回 false 并填真实 appid/secret。
+    #    否则所有用户会落到同一个 openid（数据串号：互相看到对方的订单和购物车）。
+    enable-mock: false
+    mock-openid: ""
+    appid: <填小程序appid>
+    secret: <填小程序secret>
+    mchid: <填商户号>
+    mchSerialNo: <填证书序列号>
+    privateKeyFilePath: <填apiclient_key.pem路径>
+    apiV3Key: <填apiV3Key>
+    weChatPayCertFilePath: <填平台证书路径>
+    notifyUrl: https://<你的域名>/notify/paySuccess
+    refundNotifyUrl: https://<你的域名>/notify/refundSuccess
+
+  shop:
+    address: <填店铺地址，配送范围校验用>
+
+  baidu:
+    # 上线必须填真实 ak 并打开校验，否则配送范围完全不受限
+    ak: <填百度地图ak>
+    enable-range-check: true
+
+  ai:
+    # Python Agent 服务地址（同机，只监听回环）
+    python-base: http://127.0.0.1:8000
+
+  internal:
+    # ★ 内部接口共享密钥（三层防护第 ② 层）。
+    #   和 Python 的 INTERNAL_TOKEN 环境变量填同一个值。
+    #   不填 = 不校验（本地开发就是空的）。
+    token: <填一个随机串，如 openssl rand -hex 16 的输出>

@@ -13,12 +13,14 @@ import com.shike.exception.DeletionNotAllowedException;
 import com.shike.mapper.*;
 import com.shike.result.PageResult;
 import com.shike.service.DishService;
+import com.shike.vo.AiDishVO;
 import com.shike.vo.DishVO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -170,6 +172,16 @@ public class DishServiceImpl  implements DishService {
         }
 
         return dishVOList;
+    }
+
+    /**
+     * 给 AI 用的菜单查询：只返回起售菜品，keyword / maxPrice 传 null 表示该维度不限。
+     */
+    @Override
+    public List<AiDishVO> listForAi(String keyword, BigDecimal maxPrice) {
+        // 这一层只做转发，没有业务逻辑。
+        // 保留它的理由：将来要加过滤、打点、缓存，都改这里，Controller 不用动。
+        return dishMapper.listForAi(keyword, maxPrice);
     }
 
 }

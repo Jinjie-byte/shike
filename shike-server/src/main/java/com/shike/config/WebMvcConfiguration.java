@@ -1,5 +1,6 @@
 package com.shike.config;
 
+import com.shike.interceptor.InternalTokenInterceptor;
 import com.shike.interceptor.JwtTokenAdminInterceptor;
 import com.shike.interceptor.JwtTokenUserInterceptor;
 import com.shike.json.JacksonObjectMapper;
@@ -32,6 +33,8 @@ public class WebMvcConfiguration extends WebMvcConfigurationSupport {
     private JwtTokenAdminInterceptor jwtTokenAdminInterceptor;
     @Autowired
     private JwtTokenUserInterceptor jwtTokenUserInterceptor;
+    @Autowired
+    private InternalTokenInterceptor internalTokenInterceptor;
 
     /**
      * 注册自定义拦截器
@@ -48,6 +51,11 @@ public class WebMvcConfiguration extends WebMvcConfigurationSupport {
                 .addPathPatterns("/user/**")
                 .excludePathPatterns("/user/user/login")
                 .excludePathPatterns("/user/shop/status");
+
+        // /internal/** 是给 Python 侧的 AI Agent 调的，没有用户 token，
+        // 所以用"共享密钥"这条路（shike.internal.token 不配则不校验）。
+        registry.addInterceptor(internalTokenInterceptor)
+                .addPathPatterns("/internal/**");
     }
 
     /**

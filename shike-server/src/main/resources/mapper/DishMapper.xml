@@ -73,4 +73,51 @@
             </if>
         </where>
     </select>
+
+    <!-- ============================================================
+         【课 2 空①】给 AI 用的菜品搜索
+
+         照着上面 list 那个查询的写法改，要求：
+
+           1) 从 dish 查，并 left join category 取分类名
+              需要的列：d.id, d.name, d.price, d.description,
+                        c.name as category_name
+              （category_name 能自动映射到 AiDishVO.categoryName，
+                因为项目开了驼峰映射 —— 上面 pageQuery 就是这么干的）
+
+           2) 只查【起售】的菜：d.status = 1
+              ★ 这个条件写死，不要包 <if> —— 停售的菜不该被推荐给用户
+
+           3) 关键词（keyword 不为空时才加这个条件）：
+                 name 或 description 任意一个包含它
+              ★ 两个条件要用括号括起来再 and，否则会跟别的条件"串味"
+              ★ 判空要判两种：null 和空字符串 ''
+                （为什么？看上面 update 里是怎么写的）
+
+           4) 价格上限（maxPrice 不为 null 时才加）：price <= maxPrice
+              ★ 坑：XML 里 '<' 是保留字符，必须写成 &lt;
+                 （这就是为什么这里不能直接抄 Java 里的写法）
+
+           5) 按价格升序排 —— 用户说要便宜的，就先给他便宜的
+
+         为什么用 <where> 标签？（你在练习 8 用过）
+             它自动处理开头的 and，以及"一个条件都没有"时的语法问题
+         ============================================================ -->
+    <select id="listForAi" resultType="com.shike.vo.AiDishVO">
+        select d.id, d.name, d.price, d.description, c.name as category_name
+        from dish d
+        left outer join category c on d.category_id = c.id
+        <where>
+            d.status = 1
+            <if test="keyword != null and keyword != ''">
+                and (d.name like concat('%', #{keyword}, '%')
+                     or d.description like concat('%', #{keyword}, '%'))
+            </if>
+            <if test="maxPrice != null">
+                and d.price &lt;= #{maxPrice}
+            </if>
+        </where>
+        order by d.price asc
+    </select>
+
 </mapper>

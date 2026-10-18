@@ -17,12 +17,14 @@ import com.shike.mapper.SetmealMapper;
 import com.shike.result.PageResult;
 import com.shike.service.SetmealService;
 import com.shike.vo.DishItemVO;
+import com.shike.vo.AiSetmealVO;
 import com.shike.vo.SetmealVO;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -182,5 +184,39 @@ public class SetmealServiceImpl implements SetmealService {
         return setmealMapper.getDishItemBySetmealId(id);
     }
 
+    /**
+     * 给 AI 用的套餐列表。
+     *
+     * 为什么循环查菜品而不是用一条 join 一次查完：
+     *   套餐数量和菜品种类都很少（目前 1 个套餐、2 道菜），循环没有性能问题，
+     *   而且能直接复用已有的 getDishItemBySetmealId，不用新写一段 join SQL。
+     *   如果将来套餐上百个，再改成一条 SQL 用 collection 映射。
+     */
+    @Override
+    public List<AiSetmealVO> listForAi() {
+        List<Setmeal> setmeals = setmealMapper.listForAi();
+
+        List<AiSetmealVO> result = new ArrayList<>(setmeals.size());
+        for (Setmeal s : setmeals) {
+            List<DishItemVO> items = setmealMapper.getDishItemBySetmealId(s.getId());
+
+            List<AiSetmealVO.Item> aiItems = new ArrayList<>(items.size());
+            for (DishItemVO item : items) {
+                aiItems.add(AiSetmealVO.Item.builder()
+                        .name(item.getName())
+                        .copies(item.getCopies())
+                        .build());
+            }
+
+            result.add(AiSetmealVO.builder()
+                    .id(s.getId())
+                    .name(s.getName())
+                    .price(s.getPrice())
+                    .description(s.getDescription())
+                    .items(aiItems)
+                    .build());
+        }
+        return result;
+    }
 
 }

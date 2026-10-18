@@ -83,4 +83,14 @@ public interface SetmealMapper {
      * @return
      */
     Integer countByMap(Map map);
+
+    /**
+     * 给 AI 用的套餐列表：只查起售的，只要模型判断需要的字段。
+     *
+     * 为什么不复用 list(Setmeal)：
+     *   那个是管理端在用，查全部字段（含 image / create_time / update_user…），
+     *   而且不过滤状态 —— 停售的套餐不能推荐给用户。
+     */
+    @Select("select id, name, price, description from setmeal where status = 1 order by price asc")
+    List<Setmeal> listForAi();
 }
