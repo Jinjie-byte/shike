@@ -2,6 +2,7 @@ package com.shike.service.impl;
 
 import com.shike.context.BaseContext;
 import com.shike.entity.AddressBook;
+import com.shike.exception.AddressBookBusinessException;
 import com.shike.mapper.AddressBookMapper;
 import com.shike.service.AddressBookService;
 import lombok.extern.slf4j.Slf4j;
@@ -44,7 +45,22 @@ public class AddressBookServiceImpl implements AddressBookService {
      * @return
      */
     public AddressBook getById(Long id) {
+        return getOwnedAddress(id);
+    }
+
+    /**
+     * 按 id 查地址，并校验归属当前登录用户。
+     *
+     * 为什么必须校验：接口只从 URL 拿 id，不校验的话任何登录用户改个 id 就能
+     * 读到别人的收货人、手机号和门牌号 —— 典型越权（IDOR）。
+     * 统一抛"地址不存在"，避免暴露"这个 id 是存在的"。
+     */
+    private AddressBook getOwnedAddress(Long id) {
         AddressBook addressBook = addressBookMapper.getById(id);
+        Long userId = BaseContext.getCurrentId();
+        if (addressBook == null || userId == null || !userId.equals(addressBook.getUserId())) {
+            throw new AddressBookBusinessException("地址不存在");
+        }
         return addressBook;
     }
 
@@ -54,6 +70,9 @@ public class AddressBookServiceImpl implements AddressBookService {
      * @param addressBook
      */
     public void update(AddressBook addressBook) {
+        // 先确认这条地址是自己的，否则可以构造请求改掉别人的收货地址
+        getOwnedAddress(addressBook.getId());
+        addressBook.setUserId(BaseContext.getCurrentId());
         addressBookMapper.update(addressBook);
     }
 
@@ -80,6 +99,8 @@ public class AddressBookServiceImpl implements AddressBookService {
      * @param id
      */
     public void deleteById(Long id) {
+        // 同上：只能删自己的地址
+        getOwnedAddress(id);
         addressBookMapper.deleteById(id);
     }
 

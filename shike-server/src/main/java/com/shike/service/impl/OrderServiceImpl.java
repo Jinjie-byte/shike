@@ -64,6 +64,11 @@ public class OrderServiceImpl implements OrderService {
         if (addressBook == null) {
             throw new AddressBookBusinessException(MessageConstant.ADDRESS_BOOK_IS_NULL); //  收货地址为空
         }
+        // 收货地址必须是自己的：不校验的话，可以把订单下到别人的地址上（越权）
+        Long currentUserId = BaseContext.getCurrentId();
+        if (currentUserId == null || !currentUserId.equals(addressBook.getUserId())) {
+            throw new AddressBookBusinessException(MessageConstant.ADDRESS_BOOK_IS_NULL);
+        }
         // 检查用户的收货地址是否超出配送范围
         // 依赖百度地图 API；本地开发/演示可关闭（见 shike.baidu.enable-range-check）
         if (enableRangeCheck) {
@@ -94,6 +99,12 @@ public class OrderServiceImpl implements OrderService {
             }
         }
         order.setAmount(totalAmount);
+
+        // ★ 打包费也不能信前端（之前测试传 packAmount=-999 直接落库了）。
+        //   当前项目不收打包费，统一归零；将来要收，就在这里按规则算并计入 totalAmount，
+        //   绝不要把 DTO 里的值原样带进来 —— 这和 amount 是同一类"信任前端"漏洞。
+        order.setPackAmount(0);   // Orders.packAmount 是 int
+
         order.setOrderTime(LocalDateTime.now());
         order.setPayStatus(Orders.UN_PAID);
         order.setStatus(Orders.PENDING_PAYMENT);
@@ -245,10 +256,28 @@ public class OrderServiceImpl implements OrderService {
         return new PageResult(page.getTotal(), list);
     }
 
+    /**
+     * 按 id 查订单，并校验归属当前登录用户。
+     *
+     * 为什么必须校验：/user/order/** 这些接口只从 URL 拿 id。不校验的话，
+     * 任何登录用户把 id 改成别人的，就能读到对方的收货人/电话/地址/金额，
+     * 甚至取消别人的订单 —— 典型的越权（IDOR），也是这类外卖项目最常见的漏洞。
+     *
+     * "不存在"与"不是自己的"统一抛同一个异常，避免通过报错猜出哪些 id 真实存在。
+     */
+    private Orders getOwnedOrder(Long id) {
+        Orders orders = orderMapper.getById(id);
+        Long userId = BaseContext.getCurrentId();
+        if (orders == null || userId == null || !userId.equals(orders.getUserId())) {
+            throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
+        }
+        return orders;
+    }
+
     @Override
     public OrderVO details(Long id) {
-        // 根据id查询订单
-        Orders orders = orderMapper.getById(id);
+        // 根据id查询订单（内部已校验归属）
+        Orders orders = getOwnedOrder(id);
 
         // 查询该订单对应的菜品/套餐明细
         List<OrderDetail> orderDetailList = orderDetailMapper.getByOrderId(orders.getId());
@@ -266,13 +295,8 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     public void userCancelById(Long id) throws Exception {
-        // 根据id查询订单
-        Orders ordersDB = orderMapper.getById(id);
-
-        // 校验订单是否存在
-        if (ordersDB == null) {
-            throw new OrderBusinessException(MessageConstant.ORDER_NOT_FOUND);
-        }
+        // 根据id查询订单（内部已校验归属：否则能取消别人的订单）
+        Orders ordersDB = getOwnedOrder(id);
 
         //订单状态 1待付款 2待接单 3已接单 4派送中 5已完成 6已取消
         if (ordersDB.getStatus() > 2) {
@@ -305,6 +329,9 @@ public class OrderServiceImpl implements OrderService {
     //再来一单
     @Override
     public void repetition(Long id) {
+        // 校验归属：否则能把别人订单里的菜复制进自己的购物车
+        getOwnedOrder(id);
+
         // 查询当前用户id
         Long userId = BaseContext.getCurrentId();
 
@@ -511,13 +538,8 @@ public class OrderServiceImpl implements OrderService {
      */
     @Override
     public void reminder(Long id) {
-        // 1. 确认有没有订单
-        Orders ordersDB = orderMapper.getById(id);
-
-        // 校验订单是否存在，并且状态为4
-        if (ordersDB == null) {
-            throw new OrderBusinessException(MessageConstant.ORDER_STATUS_ERROR);
-        }
+        // 1. 确认订单存在且属于当前用户（否则能给别人的订单催单）
+        Orders ordersDB = getOwnedOrder(id);
 
         // 2. 发送微信消息
         Map map = new HashMap();
