@@ -14,7 +14,10 @@ public class OssConfiguration {
     @ConditionalOnMissingBean
     @Bean
     public AliOssUtil aliOssUtil(AliOssProperties aliOssProperties) {
-        log.info("阿里云OSS配置信息: {}",aliOssProperties);
+        // ⚠️ 千万不要把 aliOssProperties 整个打出来 —— 它包含 accessKeyId / accessKeySecret，
+        //    会以明文进日志文件。日志一旦泄露 = 密钥泄露。
+        log.info("阿里云 OSS 已初始化：bucket={}, endpoint={}",
+                aliOssProperties.getBucketName(), aliOssProperties.getEndpoint());
         return new AliOssUtil(aliOssProperties.getEndpoint(),
                 aliOssProperties.getAccessKeyId(),
                 aliOssProperties.getAccessKeySecret(),
