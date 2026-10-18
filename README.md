@@ -158,11 +158,41 @@ location /ws/   {
 
 ## 演示
 
-截图与演示视频待补。
+以下截图取自本地实际运行的系统，数据为演示数据。
 
-- 管理端：工作台 / 菜品管理 / 订单处理 / 来单提醒
-- 用户端 H5：点餐 → AI 推荐 → 确认加购 → 结算下单 → 支付
-- AI 点单：多轮对话、基于真实菜单推荐、确认后代加购物车
+### AI 点单
+
+提问「想吃辣的，30 块以内」，模型先调 `get_menu` 拿到真实菜单，再按预算与口味筛选，
+并主动询问是否加购（不会擅自执行写操作）。
+
+<p align="center">
+  <img src="docs/screenshots/h5-ai.png" width="300">
+</p>
+
+### 用户端 H5
+
+<p align="center">
+  <img src="docs/screenshots/h5-home.png" width="230">
+  <img src="docs/screenshots/h5-dish.png" width="230">
+  <img src="docs/screenshots/h5-cart.png" width="230">
+</p>
+<p align="center">
+  <img src="docs/screenshots/h5-checkout.png" width="230">
+  <img src="docs/screenshots/h5-my.png" width="230">
+</p>
+
+从左到右：点餐首页（分类 / 菜品 / 购物车）、菜品详情与口味选择、购物车、确认订单、我的。
+
+### 管理端
+
+<p align="center">
+  <img src="docs/screenshots/admin-dashboard.png" width="430">
+  <img src="docs/screenshots/admin-order.png" width="430">
+</p>
+
+左侧：工作台（今日数据、订单概览、待接单提醒）；右侧：订单管理。
+
+> 小程序端为 uni-app 编译产物，受微信 HTTPS 与域名备案限制，仅支持开发者工具内运行，未附图。
 
 ## License
 
