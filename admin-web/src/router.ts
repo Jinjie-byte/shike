@@ -53,15 +53,6 @@ const router = new Router({
           }
         },
         {
-          path: "ai",
-          component: () =>
-            import(/* webpackChunkName: "dashboard" */ "@/views/ai/index.vue"),
-          meta: {
-            title: "AI 点单",
-            icon: "icon-order"
-          }
-        },
-        {
           path: "/statistics",
           component: () =>
             import(/* webpackChunkName: "shopTable" */ "@/views/statistics/index.vue"),

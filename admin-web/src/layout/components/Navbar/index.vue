@@ -104,6 +104,15 @@ export default class extends Vue {
   private storeId = this.getStoreId
   private restKey: number = 0
   private websocket = null
+  // ---- WebSocket 重连相关 ----
+  // 为什么需要：连接失败一次就弹一个 duration:0 的红框、永不消失，
+  // 用户看到的就是"一直有这个报错"。改成"只提示一次 + 后台重连"。
+  private wsClientId = ''
+  private wsDestroyed = false
+  private wsRetry = 0
+  private wsMaxRetry = 5
+  private wsTimer: any = null
+  private wsErrorNotified = false
   private newOrder = ''
   private message = ''
   private audioIsPlaying = false
@@ -164,77 +173,144 @@ export default class extends Vue {
   onload() {
   }
   destroyed() {
-    this.websocket.close() //离开路由之后断开websocket连接
+    this.wsDestroyed = true
+    if (this.wsTimer) {
+      clearTimeout(this.wsTimer)
+      this.wsTimer = null
+    }
+    if (this.websocket) {
+      // 不能直接 close()：连接没建立成功时 this.websocket 可能是 null 或半开状态
+      try {
+        ;(this.websocket as any).close()
+      } catch (e) {
+        /* ignore */
+      }
+      this.websocket = null
+    }
+  }
+
+  /**
+   * 计算 WebSocket 地址。
+   *
+   * 原来的写法是 VUE_APP_SOCKET_URL + clientId，而 .env.production 里
+   * VUE_APP_SOCKET_URL 是空串 → 拼出来只剩一个随机 id（如 "k3j9x2"），
+   * 不是合法的 ws 地址 → 连不上 → 每次进后台都弹「服务器错误，无法接收实时报警信息」。
+   *
+   * 现在的策略：
+   *   1. 本地开发：用 .env.development 里配的 ws://localhost:8080/ws/（直连后端）
+   *   2. 生产构建：环境变量为空 → 用当前页面的协议和域名自动拼，
+   *      即 ws://<当前域名>/ws/<id>，由 nginx 转发到 8080。
+   *      这样换服务器 / 换域名 / 上 HTTPS（自动变 wss）都不用改代码。
+   */
+  private resolveSocketUrl(clientId: string): string {
+    const configured = (process.env.VUE_APP_SOCKET_URL || '').trim()
+    let base = configured
+    if (!base) {
+      const scheme = location.protocol === 'https:' ? 'wss://' : 'ws://'
+      base = `${scheme}${location.host}/ws/`
+    }
+    return base.endsWith('/') ? base + clientId : base + '/' + clientId
   }
 
   // 添加新订单提示弹窗
   webSocket() {
     const that = this as any
-    let clientId = Math.random().toString(36).substr(2)
-    let socketUrl = process.env.VUE_APP_SOCKET_URL + clientId
-    console.log(socketUrl, 'socketUrl')
-    if (typeof WebSocket == 'undefined') {
+
+    if (typeof WebSocket === 'undefined') {
       that.$notify({
         title: '提示',
         message: '当前浏览器无法接收实时报警信息，请使用谷歌浏览器！',
         type: 'warning',
         duration: 0,
       })
-    } else {
-      this.websocket = new WebSocket(socketUrl)
-      // 监听socket打开
-      this.websocket.onopen = function () {
-        console.log('浏览器WebSocket已打开')
-      }
-      // 监听socket消息接收
-      this.websocket.onmessage = function (msg) {
-        // 转换为json对象
-        that.$refs.audioVo.currentTime = 0
-        that.$refs.audioVo2.currentTime = 0
+      return
+    }
 
-        console.log(msg, JSON.parse(msg.data), 'msg')
-        // const h = this.$createElement
-        const jsonMsg = JSON.parse(msg.data)
-        if (jsonMsg.type === 1) {
-          that.$refs.audioVo.play()
-        } else if (jsonMsg.type === 2) {
-          that.$refs.audioVo2.play()
-        }
-        that.$notify({
-          title: jsonMsg.type === 1 ? '待接单' : '催单',
-          duration: 0,
-          dangerouslyUseHTMLString: true,
-          onClick: () => {
-            that.$router
-              .push(`/order?orderId=${jsonMsg.orderId}`)
-              .catch((err) => {
-                console.log(err)
-              })
-            setTimeout(() => {
-              location.reload()
-            }, 100)
-          },
-          // 这里也可以把返回信息加入到message中显示
-          message: `${
-            jsonMsg.type === 1
-              ? `<span>您有1个<span style=color:#419EFF>订单待处理</span>,${jsonMsg.content},请及时接单</span>`
-              : `${jsonMsg.content}<span style='color:#419EFF;cursor: pointer'>去处理</span>`
-          }`,
-        })
+    if (!this.wsClientId) {
+      this.wsClientId = Math.random().toString(36).substr(2)
+    }
+    const socketUrl = this.resolveSocketUrl(this.wsClientId)
+    console.log(socketUrl, 'socketUrl')
+
+    try {
+      this.websocket = new WebSocket(socketUrl)
+    } catch (e) {
+      console.error('WebSocket 地址不合法：', socketUrl, e)
+      this.onWsFail()
+      return
+    }
+
+    // 监听socket打开
+    ;(this.websocket as any).onopen = function () {
+      console.log('浏览器WebSocket已打开')
+      // 连上之后重置重试计数，下次断了还能继续重连
+      that.wsRetry = 0
+      that.wsErrorNotified = false
+    }
+    // 监听socket消息接收
+    ;(this.websocket as any).onmessage = function (msg: any) {
+      // 转换为json对象
+      that.$refs.audioVo.currentTime = 0
+      that.$refs.audioVo2.currentTime = 0
+
+      const jsonMsg = JSON.parse(msg.data)
+      if (jsonMsg.type === 1) {
+        that.$refs.audioVo.play()
+      } else if (jsonMsg.type === 2) {
+        that.$refs.audioVo2.play()
       }
-      // 监听socket错误
-      this.websocket.onerror = function () {
-        that.$notify({
-          title: '错误',
-          message: '服务器错误，无法接收实时报警信息',
-          type: 'error',
-          duration: 0,
-        })
-      }
-      // 监听socket关闭
-      this.websocket.onclose = function () {
-        console.log('WebSocket已关闭')
-      }
+      that.$notify({
+        title: jsonMsg.type === 1 ? '待接单' : '催单',
+        duration: 0,
+        dangerouslyUseHTMLString: true,
+        onClick: () => {
+          that.$router
+            .push(`/order?orderId=${jsonMsg.orderId}`)
+            .catch((err: any) => {
+              console.log(err)
+            })
+          setTimeout(() => {
+            location.reload()
+          }, 100)
+        },
+        message: `${
+          jsonMsg.type === 1
+            ? `<span>您有1个<span style=color:#419EFF>订单待处理</span>,${jsonMsg.content},请及时接单</span>`
+            : `${jsonMsg.content}<span style='color:#419EFF;cursor: pointer'>去处理</span>`
+        }`,
+      })
+    }
+    // 监听socket错误
+    ;(this.websocket as any).onerror = () => {
+      this.onWsFail()
+    }
+    // 监听socket关闭 —— 自动重连（退避：5s / 10s / 20s ...，最多 5 次）
+    ;(this.websocket as any).onclose = () => {
+      console.log('WebSocket已关闭')
+      if (this.wsDestroyed) return
+      if (this.wsRetry >= this.wsMaxRetry) return
+      const delay = 5000 * Math.pow(2, this.wsRetry)
+      this.wsRetry += 1
+      this.wsTimer = setTimeout(() => this.webSocket(), delay)
+    }
+  }
+
+  /** 连接失败：只提示一次，别每次都弹一个永不消失的红框 */
+  private onWsFail() {
+    if (!this.wsErrorNotified) {
+      this.wsErrorNotified = true
+      ;(this as any).$notify({
+        title: '连接中断',
+        message: '实时来单提醒已断开，正在自动重连（不影响正常接单）',
+        type: 'warning',
+        duration: 5000,
+      })
+    }
+    // 走 onclose 的重连逻辑；如果 onclose 没触发（比如构造就失败），这里兜底
+    if (!this.wsTimer && !this.wsDestroyed && this.wsRetry < this.wsMaxRetry) {
+      const delay = 5000 * Math.pow(2, this.wsRetry)
+      this.wsRetry += 1
+      this.wsTimer = setTimeout(() => this.webSocket(), delay)
     }
   }
 
