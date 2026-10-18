@@ -82,7 +82,7 @@ git: 版本控制工具, 在团队协作中, 使用该工具对项目中的代�
          password: 本机密码
     aliyun:   #阿里云配置,用于文件上传
         access-key-id: xxxxxxxxxxxxxxxxxxxx  #阿里云accessKey
-        access-key-secret: REDACTED #阿里云secretKey
+        access-key-secret: your-access-key-secret  #阿里云secretKey
         endpoint: oss-cn-beijing.aliyuncs.com  #阿里云endpoint
         bucket-name: xxxxxxxx  #阿里云bucketName
     redis:
