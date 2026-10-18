@@ -1,0 +1,7 @@
+fastapi
+uvicorn[standard]
+langchain
+langgraph
+langchain-deepseek
+openai
+httpx
